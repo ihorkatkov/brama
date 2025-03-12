@@ -1,0 +1,128 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Elixir Documentation Practices
+
+<rule>
+name: elixir_documentation
+description: Best practices for writing effective documentation in Elixir code
+filters:
+  - type: file_extension
+    pattern: "\\.ex$|\\.exs$"
+
+actions:
+  - type: suggest
+    message: |
+      # Elixir Documentation Best Practices
+
+      ## Module Documentation
+      - Always include a `@moduledoc` attribute with clear description of the module's purpose
+      - Structure module docs with markdown headings for better readability
+      - Include examples of common usage patterns
+      - Document any behaviors the module implements
+      - For large modules, add a table of contents
+      
+      ## Function Documentation
+      - Document all public functions with `@doc` attributes
+      - Include information about:
+        - What the function does
+        - Parameter descriptions and expected types
+        - Return value description and type
+        - Possible errors or exceptions
+        - Usage examples
+      - Use backticks for code elements: `variable_name`, `function_name/arity`
+      
+      ## Type Documentation
+      - Use `@typedoc` to explain complex or non-obvious types
+      - Document all public type definitions
+      
+      ## Code Examples
+      - Include practical examples in documentation
+      - Use doctests with `iex>` prompts to provide testable examples:
+        ```elixir
+        @doc """
+        Adds two numbers.
+        
+        ## Examples
+            
+            iex> Calculator.add(2, 3)
+            5
+        """
+        ```
+      
+      ## Documentation Format
+      - Use markdown formatting for rich documentation
+      - Add headers, lists, and code blocks to structure information
+      - Use backticks for inline code and triple backticks for code blocks
+      - Keep line length at a reasonable width (recommended: 80-100 characters)
+      
+      ## Specialized Documentation
+      - Add `@deprecated` tags with migration information for deprecated functions
+      - Include `@since` tags when version history is important
+      - Use `@see` references to link to related functions or modules
+
+examples:
+  - input: |
+      defmodule MyApp.User do
+        def create(attrs) do
+          # Implementation
+        end
+        
+        def update(user, attrs) do
+          # Implementation
+        end
+      end
+    output: |
+      defmodule MyApp.User do
+        @moduledoc """
+        Handles user-related operations including creation, updates, and queries.
+        
+        This module provides a complete API for managing user accounts in the system.
+        """
+        
+        @doc """
+        Creates a new user with the given attributes.
+        
+        ## Parameters
+          - attrs: Map containing user attributes
+        
+        ## Returns
+          - `{:ok, user}` on success
+          - `{:error, changeset}` on validation failure
+        
+        ## Examples
+        
+            iex> MyApp.User.create(%{name: "John", email: "john@example.com"})
+            {:ok, %User{name: "John", email: "john@example.com"}}
+        """
+        def create(attrs) do
+          # Implementation
+        end
+        
+        @doc """
+        Updates an existing user with the provided attributes.
+        
+        ## Parameters
+          - user: The user struct to update
+          - attrs: Map containing updated user attributes
+        
+        ## Returns
+          - `{:ok, user}` on success
+          - `{:error, changeset}` on validation failure
+        
+        ## Examples
+        
+            iex> MyApp.User.update(user, %{name: "New Name"})
+            {:ok, %User{name: "New Name", email: "john@example.com"}}
+        """
+        def update(user, attrs) do
+          # Implementation
+        end
+      end
+
+metadata:
+  priority: high
+  version: 1.0
+</rule> 

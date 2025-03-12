@@ -1,0 +1,209 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+ # Elixir Performance Optimization
+
+<rule>
+name: elixir_performance
+description: Best practices for optimizing performance in Elixir applications
+filters:
+  - type: file_extension
+    pattern: "\\.ex$|\\.exs$"
+
+actions:
+  - type: suggest
+    message: |
+      # Elixir Performance Optimization Best Practices
+
+      ## General Principles
+      - Focus on performance only after functionality is correct
+      - Profile first, optimize later - identify actual bottlenecks
+      - Measure before and after optimization to verify improvements
+      - Remember that premature optimization is the root of many problems
+      
+      ## Data Structure Selection
+      - Use the right data structure for the operation (Map vs List vs MapSet)
+      - For large lists with frequent lookups, use maps or ETS tables
+      - Use binaries efficiently with proper pattern matching
+      - Consider Stream for large collections when you don't need all results at once
+      
+      ## Computation Strategies
+      - Prefer pattern matching over conditionals when possible
+      - Use tail recursion for processing collections
+      - Consider using list comprehensions for building lists
+      - Use function capturing (`&`) for cleaner higher-order functions
+      
+      ## Process Management
+      - Use appropriate concurrency patterns for your workload
+      - Avoid process bottlenecks with proper workload distribution
+      - Consider process pools for limiting resource usage
+      - Use Tasks for parallelizing independent operations
+      
+      ## Memory Management
+      - Avoid unnecessary data copying between processes
+      - Be careful with large binaries and reference counting
+      - Use binary pattern matching efficiently 
+      - Consider binary construction with iodata for large string operations
+      
+      ## Database and I/O Operations
+      - Optimize database queries and use proper indexing
+      - Batch database operations when possible
+      - Use Ecto's preloading effectively to avoid N+1 query problems
+      - Consider caching strategies for frequently accessed data
+      
+examples:
+  - input: |
+      defmodule Inefficient do
+        def process_list(items) do
+          # Building a new list inefficiently
+          result = []
+          Enum.each(items, fn item ->
+            processed = transform(item)
+            result = result ++ [processed]  # Inefficient append
+          end)
+          result
+        end
+        
+        def lookup_value(list, key) do
+          # O(n) lookup in a list
+          Enum.find(list, fn {k, _v} -> k == key end)
+        end
+        
+        defp transform(item) do
+          # Some transformation
+          item * 2
+        end
+      end
+    output: |
+      defmodule Optimized do
+        def process_list(items) do
+          # Using map directly - more efficient and cleaner
+          Enum.map(items, &transform/1)
+          
+          # Alternative: if order matters and you're building in reverse
+          # items
+          # |> Enum.reduce([], fn item, acc ->
+          #   [transform(item) | acc]
+          # end)
+          # |> Enum.reverse()
+        end
+        
+        def lookup_value(items, key) do
+          # Convert list to map for repeated lookups
+          # O(1) lookup in a map
+          items_map = Map.new(items)
+          Map.get(items_map, key)
+          
+          # If this function is called repeatedly, even better:
+          # def lookup_value(items_map, key) when is_map(items_map) do
+          #   Map.get(items_map, key)
+          # end
+          # 
+          # def lookup_value(items, key) when is_list(items) do
+          #   items
+          #   |> Map.new()
+          #   |> Map.get(key)
+          # end
+        end
+        
+        defp transform(item) do
+          # Some transformation
+          item * 2
+        end
+      end
+  
+  - input: |
+      defmodule SlowStringBuilder do
+        def build_report(data) do
+          # Inefficient string building
+          report = ""
+          
+          report = report <> "REPORT START\n"
+          report = report <> "Date: #{Date.utc_today()}\n"
+          
+          Enum.each(data, fn {key, value} ->
+            report = report <> "#{key}: #{value}\n"  # String concat in a loop
+          end)
+          
+          report = report <> "REPORT END\n"
+          report
+        end
+      end
+    output: |
+      defmodule FastStringBuilder do
+        def build_report(data) do
+          # Using iodata for efficient string building
+          [
+            "REPORT START\n",
+            "Date: ", Date.utc_today() |> Date.to_string(), "\n",
+            Enum.map(data, fn {key, value} ->
+              [to_string(key), ": ", to_string(value), "\n"]
+            end),
+            "REPORT END\n"
+          ]
+          |> IO.iodata_to_binary()
+          
+          # Alternative with comprehension:
+          # report_parts = [
+          #   "REPORT START\n",
+          #   "Date: #{Date.utc_today()}\n",
+          #   for {key, value} <- data do
+          #     "#{key}: #{value}\n"
+          #   end,
+          #   "REPORT END\n"
+          # ]
+          # IO.iodata_to_binary(report_parts)
+        end
+      end
+      
+  - input: |
+      defmodule SequentialProcessor do
+        def process_files(files) do
+          Enum.map(files, fn file ->
+            {:ok, data} = File.read(file)
+            process_data(data)
+          end)
+        end
+        
+        defp process_data(data) do
+          # Some CPU-intensive operation
+          :timer.sleep(100)  # Simulating work
+          String.length(data)
+        end
+      end
+    output: |
+      defmodule ParallelProcessor do
+        def process_files(files) do
+          # Process files in parallel using Task
+          files
+          |> Task.async_stream(fn file ->
+            {:ok, data} = File.read(file)
+            process_data(data)
+          end, max_concurrency: 10)  # Limit concurrency to avoid overwhelming system
+          |> Enum.to_list()
+          |> Enum.map(fn {:ok, result} -> result end)
+          
+          # Alternatively for more control:
+          # tasks = Enum.map(files, fn file ->
+          #   Task.async(fn ->
+          #     {:ok, data} = File.read(file)
+          #     process_data(data)
+          #   end)
+          # end)
+          # 
+          # Task.await_many(tasks, 30_000)  # 30 second timeout
+        end
+        
+        defp process_data(data) do
+          # Some CPU-intensive operation
+          :timer.sleep(100)  # Simulating work
+          String.length(data)
+        end
+      end
+
+metadata:
+  priority: high
+  version: 1.0
+</rule>
