@@ -61,23 +61,24 @@ Provides a clean way to wrap functions with circuit breaking functionality:
 4. Circuit breaker updates the status based on success/failure patterns
 5. Subscribers are notified of any status changes
 
-## Supervision Tree
-
-Brama will use a supervision tree with the following structure:
-
-```
-BramaSupervisor
-├── ConnectionRegistry (GenServer)
-├── StatusManager (GenServer) 
-└── EventManager (GenServer)
-```
-
 ## State Management
 
 Connection states will follow this pattern:
 1. **Closed** - Normal operation, calls allowed
 2. **Open** - Circuit broken, calls rejected without attempting
 3. **Half-Open** - Test state, limited calls allowed to check recovery
+
+### Circuit Breaker Terminology Note
+
+The circuit breaker pattern borrows terminology from electrical engineering:
+
+- **Closed Circuit**: In electrical terms, a closed circuit allows current to flow through it. Similarly, in our circuit breaker, the "Closed" state allows calls to flow through to the external service. This is the normal, healthy operational state.
+
+- **Open Circuit**: An electrical open circuit has a break that prevents current from flowing. In our circuit breaker, the "Open" state prevents calls from reaching the failing service, protecting the system from cascading failures.
+
+- **Half-Open Circuit**: This transitional state allows a limited number of test calls to determine if the external service has recovered. Based on the success or failure of these test calls, the circuit will either return to "Closed" (if successful) or remain "Open" (if still failing).
+
+This naming convention, while potentially counterintuitive at first, maintains consistency with industry-standard circuit breaker implementations.
 
 ## Error Handling
 
@@ -96,9 +97,8 @@ Connection states will follow this pattern:
 ## Extension Points
 
 Brama's architecture will allow for extension in these areas:
-- Custom connection types beyond the built-in ones
 - Advanced status tracking mechanisms
-- Integration with monitoring systems
+- Telemetry integration
 - Custom notification handlers
 - Custom event filtering mechanisms
 - Custom decorator behavior for specialized use cases 
