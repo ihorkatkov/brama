@@ -1,0 +1,65 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Elixir Naming Conventions
+
+<rule>
+name: elixir_naming_conventions
+description: Guidelines for consistent and idiomatic Elixir naming
+filters:
+  - type: file_extension
+    pattern: "\\.ex$|\\.exs$"
+
+actions:
+  - type: suggest
+    message: |
+      # Elixir Naming Conventions Best Practices
+
+      ## Variable and Function Names
+      - Use snake_case for variables, function names, and module attributes: `user_count`, `calculate_total`
+      - Use descriptive names that convey purpose and avoid abbreviations: `calculate_total` instead of `calc_tot`
+      - Use single-letter variables only for very simple and short functions or comprehensions
+      
+      ## Module Names
+      - Use PascalCase (UpperCamelCase) for module names: `UserAccount`, `PaymentProcessor`
+      - Namespace related modules with dot notation: `MyApp.User`, `MyApp.User.Account`
+      - Use plural forms for collections/modules that operate on multiple entities: `Users`, `Accounts`
+      
+      ## Constants and Module Attributes
+      - Use ALL_CAPS for configuration constants: `@MAX_CONNECTIONS`, `@DEFAULT_TIMEOUT`
+      - Use snake_case for regular module attributes: `@user_table`, `@compile_options`
+      
+      ## Boolean Functions
+      - Use `?` suffix for predicate functions returning boolean values: `admin?`, `valid?`
+      
+      ## Bang Functions
+      - Use `!` suffix for functions that raise exceptions on failure: `fetch!`, `update!`
+      - Always provide non-bang version returning {:ok, value} or {:error, reason}
+      
+      ## Test Functions
+      - Prefix test functions with "test_": `test_user_creation`, `test_admin_permissions`
+      
+      ## Protocols and Behaviours
+      - Use clear, descriptive names for protocol functions
+      - Use `-able` or `-er` suffixes where appropriate: `Enumerable`, `Comparable`
+
+examples:
+  - input: |
+      defmodule userManager do
+        def CreateUser(userName, pwd) do
+          # code 
+        end
+      end
+    output: |
+      defmodule UserManager do
+        def create_user(user_name, password) do
+          # code
+        end
+      end
+
+metadata:
+  priority: high
+  version: 1.0
+</rule> 

@@ -1,0 +1,114 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Elixir Error Handling
+
+<rule>
+name: elixir_error_handling
+description: Best practices for handling errors and exceptions in Elixir
+filters:
+  - type: file_extension
+    pattern: "\\.ex$|\\.exs$"
+
+actions:
+  - type: suggest
+    message: |
+      # Elixir Error Handling Best Practices
+
+      ## Return Values vs Exceptions
+      - Use `{:ok, result}` and `{:error, reason}` tuples for expected error cases
+      - Use exceptions only for exceptional, unexpected situations
+      - Provide both bang (`!`) and non-bang versions of functions when appropriate
+      - Document error return values in function specifications
+      
+      ## Error Tuples
+      - Use standardized error tuples: `{:error, reason}` or `{:error, type, reason}`
+      - Make error reasons descriptive and actionable
+      - Consider including additional context in error tuples for complex operations
+      - Use atoms for error types to allow pattern matching
+      
+      ## With Statement
+      - Use `with` for sequences of operations that can fail
+      - Handle errors explicitly in the `else` clause
+      - Avoid deeply nested `with` statements
+      - Return consistent error structures from `with` expressions
+      
+      ## Try/Rescue
+      - Use `try/rescue` sparingly, primarily when working with external code
+      - Rescue specific exceptions rather than catching all exceptions
+      - Re-raise exceptions with additional context when appropriate
+      - Clean up resources with `after` clause regardless of exceptions
+      
+      ## Custom Exceptions
+      - Define custom exceptions for application-specific error conditions
+      - Use `defexception` to create structured exception types
+      - Include helpful message and context in custom exceptions
+      - Implement `Exception` behavior for custom exception types
+      
+      ## Process Failures
+      - Design processes to fail fast and restart cleanly
+      - Use supervision trees to handle process failures
+      - Consider using `handle_info/2` to catch specific exit signals
+      - Log errors appropriately before crashing
+
+examples:
+  - input: |
+      def fetch_user(id) do
+        case Repo.get(User, id) do
+          nil -> raise "User not found"
+          user -> user
+        end
+      end
+    output: |
+      def fetch_user(id) do
+        case Repo.get(User, id) do
+          nil -> {:error, :not_found}
+          user -> {:ok, user}
+        end
+      end
+      
+      def fetch_user!(id) do
+        case Repo.get(User, id) do
+          nil -> raise UserNotFoundError, "User with ID #{id} not found"
+          user -> user
+        end
+      end
+      
+      defmodule UserNotFoundError do
+        defexception message: "User not found"
+      end
+  
+  - input: |
+      def process_file(path) do
+        data = File.read(path)
+        if elem(data, 0) == :ok do
+          process_data(elem(data, 1))
+        else
+          raise "Couldn't read file"
+        end
+      end
+    output: |
+      def process_file(path) do
+        with {:ok, data} <- File.read(path),
+             {:ok, result} <- process_data(data) do
+          {:ok, result}
+        else
+          {:error, :enoent} -> 
+            {:error, :file_not_found, "File does not exist at #{path}"}
+          {:error, reason} -> 
+            {:error, :file_error, reason}
+          {:error, :processing, reason} -> 
+            {:error, :processing_failed, reason}
+        end
+      end
+      
+      def process_data(data) do
+        # Process data and return {:ok, result} or {:error, :processing, reason}
+      end
+
+metadata:
+  priority: high
+  version: 1.0
+</rule> 

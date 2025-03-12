@@ -1,0 +1,190 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Elixir Process Design
+
+<rule>
+name: elixir_process_design
+description: Best practices for designing process-based systems in Elixir
+filters:
+  - type: file_extension
+    pattern: "\\.ex$|\\.exs$"
+
+actions:
+  - type: suggest
+    message: |
+      # Elixir Process Design Best Practices
+
+      ## Process Organization
+      - Implement a single process in one module
+      - Assign exactly one parallel process to each truly concurrent activity
+      - Each process should have only one "role" (server, client, worker, supervisor)
+      - Use processes for structuring the system, not for basic abstraction
+      
+      ## Process Registration
+      - Register processes with the same name as their module when appropriate
+      - Only register processes that need a long lifespan
+      - Use Registry or other mechanism for dynamic process lookup
+      
+      ## Message Protocol
+      - Tag all messages for easier pattern matching and extensibility
+      - Document message formats with typespecs where applicable
+      - Flush unknown messages to prevent message queue buildup
+      - Use timeout mechanisms appropriately, handling late messages
+      
+      ## Server Implementation
+      - Write tail-recursive servers to prevent memory leaks
+      - Use interface functions rather than direct message sends
+      - Prefer OTP behaviors (GenServer, Supervisor, etc.) over raw processes
+      - Keep state transformations explicit and easy to reason about
+      
+      ## Error Handling
+      - Be intentional about trapping exits - processes should either always trap or never trap
+      - Use supervisors for automatic process restarts
+      - Apply the "Let it crash" philosophy for unexpected errors
+      - Log errors appropriately before crashing
+      
+      ## Process Dictionary
+      - Avoid the process dictionary (get/put) except in very specialized cases
+      - Pass state explicitly between function calls instead
+
+examples:
+  - input: |
+      # Raw process using spawn
+      defmodule UserRegistry do
+        def start do
+          spawn(fn -> loop(%{}) end)
+        end
+        
+        def register(registry, username, data) do
+          send(registry, {:register, username, data})
+        end
+        
+        def lookup(registry, username) do
+          send(registry, {:lookup, username, self()})
+          receive do
+            result -> result
+          after 1000 ->
+            :timeout
+          end
+        end
+        
+        defp loop(state) do
+          receive do
+            {:register, username, data} ->
+              loop(Map.put(state, username, data))
+            {:lookup, username, pid} ->
+              send(pid, Map.get(state, username))
+              loop(state)
+          end
+        end
+      end
+    output: |
+      defmodule UserRegistry do
+        use GenServer
+        
+        # Client API
+        def start_link(opts \\ []) do
+          GenServer.start_link(__MODULE__, %{}, opts)
+        end
+        
+        def register(registry, username, data) do
+          GenServer.cast(registry, {:register, username, data})
+        end
+        
+        def lookup(registry, username) do
+          GenServer.call(registry, {:lookup, username})
+        end
+        
+        # Server Callbacks
+        @impl true
+        def init(state) do
+          {:ok, state}
+        end
+        
+        @impl true
+        def handle_cast({:register, username, data}, state) do
+          {:noreply, Map.put(state, username, data)}
+        end
+        
+        @impl true
+        def handle_call({:lookup, username}, _from, state) do
+          {:reply, Map.get(state, username), state}
+        end
+        
+        # Catch unknown messages
+        @impl true
+        def handle_info(msg, state) do
+          require Logger
+          Logger.warn("Received unexpected message: #{inspect(msg)}")
+          {:noreply, state}
+        end
+      end
+      
+      # Usage:
+      {:ok, registry} = UserRegistry.start_link(name: UserRegistry)
+      UserRegistry.register(registry, "alice", %{email: "alice@example.com"})
+      user_data = UserRegistry.lookup(registry, "alice")
+      
+  - input: |
+      defmodule MessageHandler do
+        def process_messages(pid) do
+          receive do
+            {sender, msg} -> 
+              handle_message(msg)
+              sender ! {:ok, "Processed"}
+              process_messages(pid)
+            msg ->
+              handle_message(msg)
+              process_messages(pid)  
+          end
+        end
+        
+        defp handle_message(msg) do
+          # Process message
+        end
+      end
+    output: |
+      defmodule MessageHandler do
+        use GenServer
+        
+        def start_link(opts \\ []) do
+          GenServer.start_link(__MODULE__, [], opts)
+        end
+        
+        # Client API
+        def send_message(server, msg) do
+          GenServer.call(server, {:process, msg})
+        end
+        
+        # Server Callbacks
+        @impl true
+        def init(_) do
+          {:ok, []}
+        end
+        
+        @impl true
+        def handle_call({:process, msg}, from, state) do
+          result = handle_message(msg)
+          {:reply, {:ok, "Processed", result}, state}
+        end
+        
+        # Handle unexpected messages
+        @impl true
+        def handle_info(msg, state) do
+          require Logger
+          Logger.warn("Received unexpected message: #{inspect(msg)}")
+          {:noreply, state}
+        end
+        
+        defp handle_message(msg) do
+          # Process message
+        end
+      end
+
+metadata:
+  priority: high
+  version: 1.0
+</rule> 

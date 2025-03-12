@@ -1,0 +1,233 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Elixir Application Structure
+
+<rule>
+name: elixir_application_structure
+description: Best practices for structuring and organizing Elixir applications
+filters:
+  - type: file_extension
+    pattern: "\\.ex$|\\.exs$"
+
+actions:
+  - type: suggest
+    message: |
+      # Elixir Application Structure Best Practices
+
+      ## Project Organization
+      - Follow standard Mix project directory structure
+      - Keep the `lib/` directory clean and well-organized
+      - Group related modules into subdirectories by domain or feature
+      - Use contexts to isolate different parts of your application
+      
+      ## Application Design
+      - Use bounded contexts to isolate domain logic
+      - Design clear boundaries between application components
+      - Use dependency injection for configurable components
+      - Maintain consistent layer structure (persistence, domain logic, API)
+      
+      ## Configuration
+      - Use configuration properly with environment-specific settings
+      - Don't hardcode configuration values in modules
+      - Use Application environment or runtime configuration when appropriate
+      - Consider using config providers for production configuration
+      
+      ## OTP Applications
+      - Design proper supervision trees
+      - Use the Application behaviour to start your applications
+      - Define clear startup phases in application initialization
+      - Handle application shutdown gracefully
+      
+      ## Code Organization
+      - Separate interface and implementation
+      - Group related functionality in contexts
+      - Place domain logic in core modules
+      - Use behaviors and protocols to define interfaces
+      
+      ## Dependency Management
+      - Keep dependencies minimal and well-justified
+      - Specify exact version requirements for dependencies
+      - Use umbrella projects for large, complex applications
+      - Consider creating internal libraries for shared functionality
+
+examples:
+  - input: |
+      # Poor structure with everything at top level
+      defmodule MyApp do
+        def start(_type, _args) do
+          # ...
+        end
+      end
+      
+      defmodule UserRepo do
+        # User database functions
+      end
+      
+      defmodule UserController do
+        # User API controller
+      end
+      
+      defmodule OrderProcessor do
+        # Order processing logic
+      end
+      
+      defmodule NotificationSender do
+        # Notification logic
+      end
+    output: |
+      # Well-structured application with contexts
+      defmodule MyApp do
+        @moduledoc """
+        Main application module for MyApp.
+        """
+        use Application
+        
+        def start(_type, _args) do
+          children = [
+            MyApp.Repo,
+            {Phoenix.PubSub, name: MyApp.PubSub},
+            MyApp.Endpoint,
+            {MyApp.Orders.Supervisor, []}
+          ]
+          
+          opts = [strategy: :one_for_one, name: MyApp.Supervisor]
+          Supervisor.start_link(children, opts)
+        end
+      end
+      
+      # /lib/my_app/accounts/accounts.ex
+      defmodule MyApp.Accounts do
+        @moduledoc """
+        The Accounts context.
+        Handles user management, authentication, and permissions.
+        """
+        
+        alias MyApp.Accounts.User
+        alias MyApp.Repo
+        
+        @doc """
+        Returns the list of users.
+        """
+        def list_users do
+          Repo.all(User)
+        end
+        
+        # More user-related public functions...
+      end
+      
+      # /lib/my_app/accounts/user.ex
+      defmodule MyApp.Accounts.User do
+        @moduledoc """
+        The User schema and validation logic.
+        """
+        use Ecto.Schema
+        import Ecto.Changeset
+        
+        schema "users" do
+          field :email, :string
+          field :name, :string
+          # ...
+          
+          timestamps()
+        end
+        
+        # Changeset functions and validations...
+      end
+      
+      # /lib/my_app/orders/orders.ex
+      defmodule MyApp.Orders do
+        @moduledoc """
+        The Orders context.
+        Handles order processing, fulfillment, and related operations.
+        """
+        
+        # Public API for orders...
+      end
+      
+      # /lib/my_app/notifications/notifications.ex
+      defmodule MyApp.Notifications do
+        @moduledoc """
+        The Notifications context.
+        Handles sending notifications via various channels.
+        """
+        
+        # Public API for notifications...
+      end
+  
+  - input: |
+      # Configuration sprinkled throughout code
+      defmodule MyApp.EmailSender do
+        def send_email(to, subject, body) do
+          smpt_server = "smtp.mycompany.com"
+          port = 587
+          username = "system@mycompany.com"
+          password = "secretpassword"
+          
+          # Email sending logic...
+        end
+      end
+    output: |
+      # Config file: config/config.exs
+      # use Mix.Config  # For Elixir < 1.9
+      import Config    # For Elixir >= 1.9
+      
+      config :my_app, MyApp.Mailer,
+        adapter: Bamboo.SMTPAdapter,
+        server: "smtp.mycompany.com",
+        port: 587,
+        username: "system@mycompany.com",
+        password: {:system, "SMTP_PASSWORD"}  # Will be fetched from environment variable
+      
+      import_config "#{config_env()}.exs"
+      
+      # Development config: config/dev.exs
+      import Config
+      
+      config :my_app, MyApp.Mailer,
+        adapter: Bamboo.LocalAdapter  # Use local adapter for development
+      
+      # App code
+      defmodule MyApp.Mailer do
+        @moduledoc """
+        Provides email sending functionality.
+        """
+        use Bamboo.Mailer, otp_app: :my_app
+      end
+      
+      defmodule MyApp.Email do
+        @moduledoc """
+        Defines email templates and composition logic.
+        """
+        import Bamboo.Email
+        
+        def welcome_email(user) do
+          new_email()
+          |> to(user.email)
+          |> from("welcome@mycompany.com")
+          |> subject("Welcome to MyApp")
+          |> text_body("Welcome to MyApp, #{user.name}!")
+        end
+      end
+      
+      defmodule MyApp.Accounts do
+        alias MyApp.{Email, Mailer}
+        
+        def create_user(attrs) do
+          # Create user logic...
+          
+          # Send welcome email
+          user
+          |> Email.welcome_email()
+          |> Mailer.deliver_later()
+          
+          {:ok, user}
+        end
+      end
+
+metadata:
+  priority: high
+  version: 1.0
+</rule> 
