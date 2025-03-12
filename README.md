@@ -1,11 +1,36 @@
 # Brama
 
-**TODO: Add description**
+Brama is an Elixir library for reliable connection management with external dependencies. It provides robust tracking of connection statuses to APIs, services, databases, or any external system, with built-in circuit breaking to prevent cascading failures.
+
+## Overview
+
+When your application depends on external systems, knowing their availability status becomes critical. Brama serves as a gatekeeper (the name "Brama" means "gate" in several languages), monitoring your connections and protecting your application from external system failures.
+
+## Features
+
+- **Connection Monitoring**: Track status of both WebSocket and HTTP connections
+- **Circuit Breaking**: Automatically prevent requests to failing systems after a threshold is reached
+- **Self-Healing**: Connections automatically reset after a configurable expiry time
+- **Status Notifications**: Subscribe to connection status change events
+- **Failure Isolation**: Protect your application from cascading failures
+- **Minimal Configuration**: Simple setup with reasonable defaults
+
+## Overview
+
+When your application depends on external systems, knowing their availability status becomes critical. Brama serves as a gatekeeper (the name "Brama" means "gate" in several languages), monitoring your connections and protecting your application from external system failures.
+
+## Features
+
+- **Connection Monitoring**: Track status of any connection
+- **Circuit Breaking**: Automatically prevent requests to failing systems after a threshold is reached
+- **Self-Healing**: Connections automatically reset after a configurable expiry time
+- **Status Notifications**: Subscribe to connection status change events
+- **Failure Isolation**: Protect your application from cascading failures
+- **Minimal Configuration**: Simple setup with reasonable defaults
 
 ## Installation
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `brama` to your list of dependencies in `mix.exs`:
+Add Brama to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
@@ -14,8 +39,38 @@ def deps do
   ]
 end
 ```
+## Circuit Breaking Mechanism
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at <https://hexdocs.pm/brama>.
+Brama implements circuit breaking for any connection with these behaviors:
 
+1. Each connection type is tracked separately
+2. After a configurable number of failed attempts (default: 10), the circuit opens
+3. When open, all requests are rejected without attempting the external call
+4. After a configurable time period (default: 1 minute), the circuit closes again
+5. Connections have immediate status updates
+
+## Configuration Options
+
+```elixir
+config :brama,
+  max_attempts: 10,           # Attempts before circuit opens
+  cleanup_interval: 10_000,   # Status check interval in ms
+  expiry: 60_000              # Circuit open duration in ms
+```
+
+## Advanced Usage
+
+You can extend Brama for specific needs:
+
+- Create custom monitoring modules for specialized protocols
+- Implement advanced health checking logic
+- Build metrics collection around connection statuses
+- Integrate with monitoring and alerting systems
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+Brama is released under the MIT License.
