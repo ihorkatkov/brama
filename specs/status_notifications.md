@@ -26,7 +26,6 @@ Each event contains detailed information about the connection and the event itse
   event: :state_change,          # Type of event
   timestamp: 1630000000000,      # When the event occurred
   connection: "payment_api",     # Connection identifier
-  type: :http,                   # Connection type
   scope: "payments",             # Connection scope
   data: %{                       # Event-specific data
     previous_state: :closed,
@@ -58,17 +57,13 @@ Brama.subscribe(events: [:state_change, :failure])
 # Subscribe to specific connection
 Brama.subscribe(connection: "payment_api")
 
-# Subscribe to connection type
-Brama.subscribe(type: :http)
-
 # Subscribe to scope
 Brama.subscribe(scope: "payments")
 
 # Combine filters
 Brama.subscribe(
   events: [:state_change],
-  connection: "payment_api",
-  type: :http
+  connection: "payment_api"
 )
 ```
 

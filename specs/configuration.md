@@ -18,13 +18,6 @@ config :brama,
   # Cleanup settings
   cleanup_interval: 10_000,   # Status check interval in ms (default: 10,000)
   inactive_threshold: 86_400_000,  # Time before cleanup in ms (default: 24 hours)
-  
-  # Operation settings
-  telemetry_prefix: [:brama], # Telemetry event prefix (default: [:brama])
-  default_type: :general,     # Default connection type (default: :general)
-  
-  # Testing settings
-  testing_mode: false         # Testing mode (default: false)
 ```
 
 ## Per-Connection Configuration
@@ -35,7 +28,6 @@ Each connection can override global settings during registration:
 Brama.register("payment_api", 
   max_attempts: 5,            # Override max attempts for this connection
   expiry: 30_000,             # Override expiry time for this connection
-  type: :http,                # Specify connection type
   scope: "payment_services",  # Logical grouping
   metadata: %{                # Additional information
     url: "https://payments.example.com/api",
@@ -95,7 +87,6 @@ Brama.configure("payment_api", max_attempts: 5, expiry: 30_000)
 | `expiry` | Integer | 60_000 | Time in ms before open circuit transitions to half-open |
 | `cleanup_interval` | Integer | 10_000 | Time in ms between cleanup checks |
 | `inactive_threshold` | Integer | 86_400_000 | Time in ms before connection considered inactive |
-| `default_type` | Atom | `:general` | Default connection type if none specified |
 | `telemetry_prefix` | List | `[:brama]` | Prefix for telemetry events |
 | `testing_mode` | Boolean | `false` | Enable testing features |
 
@@ -110,26 +101,6 @@ Brama.register("flaky_service",
   max_expiry: 300_000,
   backoff_factor: 2.0
 )
-```
-
-### Custom Connection Types
-
-```elixir
-# Register custom connection types with default settings
-config :brama, :connection_types, %{
-  http: [max_attempts: 10, expiry: 60_000],
-  database: [max_attempts: 5, expiry: 30_000],
-  cache: [max_attempts: 15, expiry: 5_000]
-}
-```
-
-### Telemetry Configuration
-
-```elixir
-config :brama, :telemetry,
-  enabled: true,
-  prefix: [:my_app, :brama],
-  events: [:circuit_open, :circuit_close, :failure, :success]
 ```
 
 ## Configuration at Application Start

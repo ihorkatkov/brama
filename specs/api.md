@@ -193,6 +193,68 @@ Brama.open_circuit!("payment_api",
 Brama.close_circuit!("payment_api")
 ```
 
+## Event System API
+
+### Subscription Management
+
+```elixir
+@spec subscribe(opts :: Keyword.t()) :: {:ok, reference()} | {:error, term()}
+def subscribe(opts \\ [])
+
+@spec unsubscribe(opts :: Keyword.t()) :: :ok | {:error, term()}
+def unsubscribe(opts \\ [])
+```
+
+Subscribe/unsubscribe to connection events.
+
+**Parameters:**
+- `opts` - Filter options including:
+  - `events` - List of event types (default: all)
+  - `connection` - Connection identifier (default: all)
+  - `scope` - Connection scope (default: all)
+  - `handler` - Custom handler module (default: send messages to current process)
+
+**Returns:**
+- `{:ok, subscription_reference}` - Subscription successful
+- `{:error, reason}` - Subscription failed
+
+**Example:**
+```elixir
+# Subscribe to all state changes
+{:ok, _ref} = Brama.subscribe(events: [:state_change])
+
+# Handle events
+def handle_info({:brama_event, event}, state) do
+  Logger.info("Connection #{event.connection} changed to #{event.data.new_state}")
+  {:noreply, state}
+end
+```
+## Configuration API
+
+```elixir
+@spec configure(config :: Keyword.t() | String.t(), opts :: Keyword.t()) :: :ok | {:error, term()}
+def configure(config, opts \\ [])
+```
+
+Update configuration at runtime.
+
+**Parameters:**
+- `config` - Configuration keywords or connection identifier
+- `opts` - Configuration options when first parameter is a connection
+
+**Returns:**
+- `:ok` - Configuration updated
+- `{:error, reason}` - Update failed
+
+**Example:**
+```elixir
+# Update global settings
+Brama.configure(max_attempts: 15, expiry: 120_000)
+
+# Update connection-specific settings
+Brama.configure("payment_api", max_attempts: 5, expiry: 30_000)
+```
+
 ## Decorator API
 
 The decorator API provides a clean way to wrap functions with circuit breaking logic.
@@ -275,157 +337,3 @@ def fetch_data(id) do
   Task.async(fn -> DataService.fetch(id) end)
 end
 ```
-
-## Event System API
-
-### Subscription Management
-
-```elixir
-@spec subscribe(opts :: Keyword.t()) :: {:ok, reference()} | {:error, term()}
-def subscribe(opts \\ [])
-
-@spec unsubscribe(opts :: Keyword.t()) :: :ok | {:error, term()}
-def unsubscribe(opts \\ [])
-```
-
-Subscribe/unsubscribe to connection events.
-
-**Parameters:**
-- `opts` - Filter options including:
-  - `events` - List of event types (default: all)
-  - `connection` - Connection identifier (default: all)
-  - `type` - Connection type (default: all)
-  - `scope` - Connection scope (default: all)
-  - `handler` - Custom handler module (default: send messages to current process)
-
-**Returns:**
-- `{:ok, subscription_reference}` - Subscription successful
-- `{:error, reason}` - Subscription failed
-
-**Example:**
-```elixir
-# Subscribe to all state changes
-{:ok, _ref} = Brama.subscribe(events: [:state_change])
-
-# Handle events
-def handle_info({:brama_event, event}, state) do
-  Logger.info("Connection #{event.connection} changed to #{event.data.new_state}")
-  {:noreply, state}
-end
-```
-
-## Bulk Operations API
-
-### Bulk Status Checking
-
-```elixir
-@spec bulk_available?(identifiers :: [String.t()], opts :: Keyword.t()) :: %{String.t() => boolean()}
-def bulk_available?(identifiers, opts \\ [])
-```
-
-Check availability for multiple connections.
-
-**Parameters:**
-- `identifiers` - List of connection identifiers
-- `opts` - Options including:
-  - `type` - Common connection type (default: `:general`)
-  - `scope` - Common grouping category (default: `nil`)
-
-**Returns:**
-- Map of `%{identifier => available?}` results
-
-**Example:**
-```elixir
-statuses = Brama.bulk_available?(["payment_api", "shipping_api", "inventory_api"])
-all_available = Enum.all?(statuses, fn {_id, available} -> available end)
-```
-
-### Bulk Status Reporting
-
-```elixir
-@spec bulk_report(reports :: [{:success | :failure, String.t()}], opts :: Keyword.t()) :: :ok | {:error, term()}
-def bulk_report(reports, opts \\ [])
-```
-
-Report success/failure for multiple connections.
-
-**Parameters:**
-- `reports` - List of `{:success | :failure, identifier}` tuples
-- `opts` - Options including:
-  - `type` - Common connection type (default: `:general`)
-  - `scope` - Common grouping category (default: `nil`)
-
-**Returns:**
-- `:ok` - All reports processed
-- `{:error, failures}` - Some reports failed
-
-**Example:**
-```elixir
-Brama.bulk_report([
-  {:success, "payment_api"},
-  {:failure, "shipping_api"},
-  {:success, "inventory_api"}
-])
-```
-
-## Configuration API
-
-```elixir
-@spec configure(config :: Keyword.t() | String.t(), opts :: Keyword.t()) :: :ok | {:error, term()}
-def configure(config, opts \\ [])
-```
-
-Update configuration at runtime.
-
-**Parameters:**
-- `config` - Configuration keywords or connection identifier
-- `opts` - Configuration options when first parameter is a connection
-
-**Returns:**
-- `:ok` - Configuration updated
-- `{:error, reason}` - Update failed
-
-**Example:**
-```elixir
-# Update global settings
-Brama.configure(max_attempts: 15, expiry: 120_000)
-
-# Update connection-specific settings
-Brama.configure("payment_api", max_attempts: 5, expiry: 30_000)
-```
-
-## Group Management API
-
-```elixir
-@spec register_group(group_name :: String.t(), identifiers :: [String.t()], opts :: Keyword.t()) :: {:ok, term()} | {:error, term()}
-def register_group(group_name, identifiers, opts \\ [])
-
-@spec group_available?(group_name :: String.t(), opts :: Keyword.t()) :: boolean()
-def group_available?(group_name, opts \\ [])
-
-@spec group_success(group_name :: String.t(), opts :: Keyword.t()) :: :ok | {:error, term()}
-def group_success(group_name, opts \\ [])
-
-@spec group_failure(group_name :: String.t(), opts :: Keyword.t()) :: :ok | {:error, term()}
-def group_failure(group_name, opts \\ [])
-```
-
-Manage and interact with connection groups.
-
-**Example:**
-```elixir
-# Register a group
-Brama.register_group("payment_services", [
-  "payment_api", 
-  "invoice_service", 
-  "tax_calculator"
-])
-
-# Check group availability
-if Brama.group_available?("payment_services") do
-  # All services in group are available
-end
-
-# Report to entire group
-Brama.group_failure("payment_services", reason: "Network outage")
-``` 

@@ -18,8 +18,7 @@ Brama is designed to act as a gatekeeper for your application's interactions wit
 | Failure Isolation | Techniques to isolate failures and protect the application | [Failure Isolation](specs/failure_isolation.md) |
 | Configuration | Configuration options and defaults | [Configuration](specs/configuration.md) |
 | Testing Strategy | Approaches for testing the library | [Testing Strategy](specs/testing_strategy.md) |
-| API | Public interface and usage patterns | [API](specs/api.md) |
-| Decorators | Function decorators for seamless circuit breaking integration | [API](specs/api.md#decorator-api) |
+| API | Public interface and usage patterns (includes Decorator API) | [API](specs/api.md) |
 
 ## Development Roadmap
 
