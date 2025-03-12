@@ -68,7 +68,7 @@ Brama.register("payment_api", max_attempts: 5, expiry: 30_000)
 
 - Only consecutive failures count toward threshold
 - A single success resets the consecutive failure counter to 0
-- Different connection types track failures separately
+- Different connections track failures separately
 
 ### Fast Circuit Check
 
@@ -95,17 +95,3 @@ Brama.close_circuit!(identifier)
 # Reset circuit to initial state
 Brama.reset_circuit!(identifier)
 ```
-
-## Testing Mode
-
-For testing, a special mode is available:
-
-```elixir
-# In test environments
-config :brama, testing_mode: true
-```
-
-In testing mode:
-- Circuits can be manually controlled
-- Automatic transitions can be triggered
-- Time-based transitions can be simulated 

@@ -2,18 +2,13 @@
 
 ## Overview
 
-This document outlines the testing strategy for the Brama library. It covers unit testing, integration testing, and strategies for testing applications that use Brama.
+This document outlines the simplified MVP testing strategy for the Brama library. It focuses on essential unit testing and integration testing.
 
 ## Testing Levels
 
 ### Unit Testing
 
 All components of Brama will have comprehensive unit tests:
-
-- **ConnectionRegistry** - Tests for registration, lookup, and state management
-- **CircuitBreaker** - Tests for state transitions and threshold behavior
-- **StatusManager** - Tests for self-healing and cleanup mechanisms
-- **EventSystem** - Tests for event generation and subscription filtering
 
 Each unit test will focus on a single component in isolation, using mocks or stubs for dependencies.
 
@@ -24,22 +19,6 @@ Integration tests will verify interactions between components:
 - Connection registration to event notification flow
 - Circuit state transitions under various conditions
 - Cleanup and expiry interactions
-
-### Property-Based Testing
-
-Property-based tests will verify mathematical and logical properties:
-
-- Circuit breaker state machine properties
-- Event delivery guarantees
-- Configuration validation rules
-
-### Performance Testing
-
-Performance tests will focus on:
-
-- Connection status lookup speed
-- Event delivery under high load
-- Memory usage with many connections
 
 ## Testing Features
 
@@ -188,24 +167,5 @@ end
 
 ## Test Organization
 
-Tests will be organized:
+Tests will be organized in common Elixir way.
 
-- **Unit tests** - In `test/unit/` directory, matching source file structure
-- **Integration tests** - In `test/integration/` directory
-- **Property tests** - In `test/property/` directory
-- **Performance tests** - In `test/performance/` directory
-
-## Continuous Integration
-
-The CI pipeline will run:
-1. Unit tests on every commit
-2. Integration tests on every PR
-3. Property tests on every PR
-4. Performance tests on scheduled basis
-
-## Test Coverage
-
-The project will maintain:
-- Minimum 90% line coverage for core components
-- Minimum 80% line coverage for auxiliary modules
-- 100% coverage of public API functions 

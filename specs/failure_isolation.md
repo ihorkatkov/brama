@@ -21,12 +21,6 @@ Brama follows these core principles for failure isolation:
 - Failure of one connection doesn't affect others
 - Different services can have different circuit thresholds and expiry times
 
-### Type-Based Isolation
-
-- Connections can be grouped by type (e.g., HTTP, DB, Redis)
-- Different types have isolated failure tracking
-- Enables different policies for different connection types
-
 ### Scope-Based Isolation
 
 - Connections can be grouped by logical scope (e.g., "payments", "inventory")
@@ -54,78 +48,30 @@ Brama.available?("shipping_api")  # Still true
 Applications use Brama for graceful degradation:
 
 ```elixir
-def get_user_data(user_id) do
-  profile = get_user_profile(user_id)
-  
-  # Only attempt if connection is available
-  payment_history = 
-    if Brama.available?("payment_api") do
-      case get_payment_history(user_id) do
-        {:ok, history} ->
-          Brama.success("payment_api")
-          history
-        {:error, reason} ->
-          Brama.failure("payment_api")
-          []
-      end
-    else
-      # Return empty if circuit is open
-      []
+defmodule UserService do
+  use Brama.Decorator
+
+  def get_user_data(user_id) do
+    profile = get_user_profile(user_id)
+    case get_payment_history(user_id) do
+      {:ok, history} ->
+        # ...
+      {:error, _reason} ->
+        # ...
     end
-    
-  %{profile: profile, payments: payment_history}
-end
-```
-
-## Bulk Operations
-
-For systems that need to check multiple connections:
-
-```elixir
-# Check multiple connections at once
-statuses = Brama.bulk_available?(["payment_api", "shipping_api", "inventory_api"])
-
-# Report multiple results at once
-Brama.bulk_report([
-  {:success, "payment_api"},
-  {:failure, "shipping_api"},
-  {:success, "inventory_api"}
-])
-```
-
-## Fallback Mechanisms
-
-Brama supports registering fallbacks for unavailable services:
-
-```elixir
-Brama.register("primary_payment_api", fallback: "secondary_payment_api")
-
-# Use the fallback mechanism
-def process_payment(payment) do
-  cond do
-    Brama.available?("primary_payment_api") ->
-      call_primary_api(payment)
-      
-    Brama.available?("secondary_payment_api") ->
-      call_secondary_api(payment)
-      
-    true ->
-      {:error, :all_payment_services_unavailable}
+  end
+  
+  # Circuit breaker automatically handles checking availability,
+  # reporting success/failure, and providing fallback
+  @circuit_breaker identifier: "payment_api"
+  defp get_payment_history(user_id) do
+    # Fetch data from an external API
+  end
+  
+  defp get_user_profile(user_id) do
+    # Profile fetching logic
   end
 end
-```
-
-## Cascading Dependency Isolation
-
-For complex dependencies:
-
-```elixir
-# Register dependencies
-Brama.register("shipping_calculator", 
-  depends_on: ["inventory_api", "location_service"])
-
-# Automatically unavailable if dependencies are unavailable
-Brama.available?("shipping_calculator")  # false if any dependency is unavailable
 ```
 
 ## Group Management

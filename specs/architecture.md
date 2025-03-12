@@ -37,7 +37,6 @@ Enables applications to react to connection status changes:
 - Supports subscribing to events by:
   - Event type (e.g., :state_change, :failure, :success)
   - Connection identifier
-  - Connection type
   - Connection scope
 - Allows unsubscribing from specific or all events
 - Delivers events as standard messages to subscribing processes

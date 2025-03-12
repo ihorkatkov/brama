@@ -8,7 +8,6 @@ Connection monitoring is a core feature of Brama that tracks the status of conne
 
 Each connection is uniquely identified by:
 - A string identifier (required) - Typically representing the service name
-- A connection type (optional) - Categorizing the connection (e.g., HTTP, WebSocket, Database)
 - A scope (optional) - For grouping related connections (e.g., "payments", "inventory")
 
 This combination allows for precise tracking and management of multiple connections to the same service.
@@ -31,7 +30,6 @@ Each connection will be stored with the following information:
 ```elixir
 %{
   identifier: "service_name",
-  type: :http,                 # Optional, default is :general
   scope: "system",             # Optional, default is nil
   state: :closed,              # Current circuit state
   failure_count: 0,            # Number of consecutive failures
@@ -51,7 +49,6 @@ Brama.register(identifier, opts \\ [])
 ```
 
 Registers a new connection with the system. Options include:
-- `type`: Connection type (default: `:general`)
 - `scope`: Grouping category (default: `nil`)
 - `metadata`: Custom information about the connection
 
