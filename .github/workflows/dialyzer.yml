@@ -1,0 +1,49 @@
+name: Dialyzer
+
+on:
+  push:
+    branches: "**"
+jobs:
+  dialyzer:
+    name: Static analysis with Dialyzer
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: '1.15'
+          otp-version: '26'
+      
+      - name: Cache deps
+        uses: actions/cache@v3
+        with:
+          path: deps
+          key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-
+
+      - name: Cache compiled build
+        uses: actions/cache@v3
+        with:
+          path: _build
+          key: ${{ runner.os }}-build-${{ hashFiles('**/mix.lock') }}
+          restore-keys: ${{ runner.os }}-build-
+      
+      # Cache PLTs for faster subsequent runs
+      - name: Cache PLTs
+        uses: actions/cache@v3
+        with:
+          path: priv/plts
+          key: ${{ runner.os }}-plts-${{ hashFiles('**/mix.lock') }}
+          restore-keys: ${{ runner.os }}-plts-
+      
+      - name: Install dependencies
+        run: mix deps.get
+      
+      - name: Create PLTs directory
+        run: mkdir -p priv/plts
+      
+      - name: Run Dialyzer
+        run: mix dialyzer 
