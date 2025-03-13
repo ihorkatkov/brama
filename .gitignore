@@ -26,3 +26,7 @@ brama-*.tar
 /tmp/
 
 .tool-versions
+
+# Dialyzer PLTs
+/priv/plts/*.plt
+/priv/plts/*.plt.hash
