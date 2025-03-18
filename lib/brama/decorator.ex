@@ -109,16 +109,14 @@ defmodule Brama.Decorator do
 
   # Execute the function with circuit breaker protection
   defp execute_with_circuit_breaker(identifier, function, opts) do
-    try do
-      # Call the original function
-      result = function.()
-      handle_result(identifier, result, opts)
-    rescue
-      exception ->
-        # Report failure on exception
-        Brama.failure(identifier, reason: Exception.message(exception))
-        reraise exception, __STACKTRACE__
-    end
+    # Call the original function
+    result = function.()
+    handle_result(identifier, result, opts)
+  rescue
+    exception ->
+      # Report failure on exception
+      Brama.failure(identifier, reason: Exception.message(exception))
+      reraise exception, __STACKTRACE__
   end
 
   # Handle the result of the function call
