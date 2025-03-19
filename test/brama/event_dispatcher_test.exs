@@ -1,13 +1,9 @@
 defmodule Brama.EventDispatcherTest do
-  use ExUnit.Case
+  use Brama.TestCase
 
   alias Brama.EventDispatcher
 
   setup do
-    # Restart the application before each test
-    Application.stop(:brama)
-    Application.ensure_all_started(:brama)
-
     # Unsubscribe after each test to avoid interference
     on_exit(fn ->
       try do

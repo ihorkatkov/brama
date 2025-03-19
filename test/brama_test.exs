@@ -1,22 +1,8 @@
 defmodule BramaTest do
-  use ExUnit.Case
+  use Brama.TestCase
   doctest Brama, except: [subscribe: 1]
 
   alias Brama.TestHelpers
-
-  setup do
-    # Restart the application before each test
-    Application.stop(:brama)
-    Application.ensure_all_started(:brama)
-
-    # Clean up any existing connections before each test
-    on_exit(fn ->
-      # This is a simplification - in a real implementation we'd have a way to reset all connections
-      :ok
-    end)
-
-    :ok
-  end
 
   describe "connection registration" do
     test "registers a new connection" do
@@ -151,7 +137,7 @@ defmodule BramaTest do
       # Now report a failure
       Brama.failure("test_api")
       # Assert that the circuit is now open
-      TestHelpers.assert_circuit_open("test_api")
+      assert {:ok, %{state: :open}} = Brama.status("test_api")
     end
 
     test "records opened_at timestamp when opening circuit" do
@@ -166,7 +152,7 @@ defmodule BramaTest do
     test "manually opens circuit" do
       Brama.register("test_api")
       assert :ok = Brama.open_circuit!("test_api")
-      TestHelpers.assert_circuit_open("test_api")
+      assert {:ok, %{state: :open}} = Brama.status("test_api")
     end
 
     test "manually closes circuit" do
@@ -186,8 +172,9 @@ defmodule BramaTest do
 
     test "manually opens circuit with custom expiry" do
       Brama.register("test_api")
-      assert :ok = Brama.open_circuit!("test_api", expiry: 30_000)
-      # Testing expiry would require time manipulation or mocking
+      Brama.subscribe([])
+      assert :ok = Brama.open_circuit!("test_api", expiry: 50)
+      assert_receive {:brama_event, %{data: %{state: :closed}}}, 100
     end
   end
 

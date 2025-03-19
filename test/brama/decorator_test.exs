@@ -1,5 +1,5 @@
 defmodule Brama.DecoratorTest do
-  use ExUnit.Case
+  use Brama.TestCase
   require Logger
 
   # Define a test module that uses the decorator

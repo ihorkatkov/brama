@@ -145,7 +145,6 @@ defmodule Brama.Decorator do
           end
         rescue
           exception ->
-            dbg(exception)
             Brama.failure(identifier, reason: Exception.message(exception))
             reraise exception, __STACKTRACE__
         end

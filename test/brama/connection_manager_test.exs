@@ -1,22 +1,8 @@
 defmodule Brama.ConnectionManagerTest do
-  use ExUnit.Case
+  use Brama.TestCase
 
   alias Brama.ConnectionManager
   alias Brama.TestHelpers
-
-  setup do
-    # Restart the application before each test
-    Application.stop(:brama)
-    Application.ensure_all_started(:brama)
-
-    # Clean up any existing connections before each test
-    on_exit(fn ->
-      # This is a simplification - in a real implementation we'd have a way to reset all connections
-      :ok
-    end)
-
-    :ok
-  end
 
   describe "connection registration" do
     test "registers a new connection" do
@@ -122,13 +108,13 @@ defmodule Brama.ConnectionManagerTest do
       ConnectionManager.register("test_api")
       TestHelpers.set_state("test_api", :half_open)
       ConnectionManager.success("test_api")
-      TestHelpers.assert_circuit_closed("test_api")
+      assert {:ok, %{state: :closed}} = ConnectionManager.status("test_api")
     end
 
     test "does not change state on success in closed state" do
       ConnectionManager.register("test_api")
       ConnectionManager.success("test_api")
-      TestHelpers.assert_circuit_closed("test_api")
+      assert {:ok, %{state: :closed}} = ConnectionManager.status("test_api")
     end
   end
 
@@ -157,7 +143,7 @@ defmodule Brama.ConnectionManagerTest do
       ConnectionManager.register("test_api")
       TestHelpers.set_state("test_api", :half_open)
       ConnectionManager.failure("test_api")
-      TestHelpers.assert_circuit_open("test_api")
+      assert {:ok, %{state: :open}} = ConnectionManager.status("test_api")
     end
 
     test "records opened_at timestamp when opening circuit" do
@@ -172,14 +158,14 @@ defmodule Brama.ConnectionManagerTest do
     test "manually opens circuit" do
       ConnectionManager.register("test_api")
       assert :ok = ConnectionManager.open_circuit!("test_api")
-      TestHelpers.assert_circuit_open("test_api")
+      assert {:ok, %{state: :open}} = ConnectionManager.status("test_api")
     end
 
     test "manually closes circuit" do
       ConnectionManager.register("test_api")
       ConnectionManager.open_circuit!("test_api")
       assert :ok = ConnectionManager.close_circuit!("test_api")
-      TestHelpers.assert_circuit_closed("test_api")
+      assert {:ok, %{state: :closed}} = ConnectionManager.status("test_api")
     end
 
     test "resets circuit" do
@@ -193,7 +179,7 @@ defmodule Brama.ConnectionManagerTest do
     test "manually opens circuit with custom expiry" do
       ConnectionManager.register("test_api")
       assert :ok = ConnectionManager.open_circuit!("test_api", expires_in: 30_000)
-      TestHelpers.assert_circuit_open("test_api")
+      assert {:ok, %{state: :open}} = ConnectionManager.status("test_api")
     end
   end
 end

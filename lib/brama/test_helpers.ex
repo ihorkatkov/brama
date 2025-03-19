@@ -3,9 +3,7 @@ defmodule Brama.TestHelpers do
   Provides helper functions for testing applications that use Brama.
 
   This module is intended to be used in test environments to:
-  - Control time for deterministic testing
   - Manipulate circuit states directly
-  - Assert on events and state transitions
   - Simulate failures and recovery
 
   ## Usage
@@ -23,45 +21,9 @@ defmodule Brama.TestHelpers do
     add_failures("test_api", 10)
 
     # Assert circuit state
-    assert_circuit_open("test_api")
+    assert {:ok, %{state: :open}} = Brama.status("test_api")
   end
   """
-
-  import ExUnit.Assertions
-
-  @doc """
-  Advances the simulated time by the specified number of milliseconds.
-
-  Only works when testing_mode is enabled in config.
-
-  ## Examples
-
-      iex> advance_time(60_000) # Advance 1 minute
-      :ok
-  """
-  @spec advance_time(integer()) :: :ok
-  def advance_time(milliseconds) when is_integer(milliseconds) and milliseconds > 0 do
-    # This is a placeholder for the actual implementation
-    # In a real implementation, this would modify a shared time reference
-    # that the ConnectionManager would use instead of System.monotonic_time
-    :ok
-  end
-
-  @doc """
-  Sets the absolute simulated time.
-
-  Only works when testing_mode is enabled in config.
-
-  ## Examples
-
-      iex> set_time(1630000000000)
-      :ok
-  """
-  @spec set_time(integer()) :: :ok
-  def set_time(timestamp) when is_integer(timestamp) and timestamp > 0 do
-    # This is a placeholder for the actual implementation
-    :ok
-  end
 
   @doc """
   Directly sets the state of a circuit.
@@ -145,140 +107,6 @@ defmodule Brama.TestHelpers do
         error -> {:halt, error}
       end
     end)
-  end
-
-  @doc """
-  Asserts that a circuit is in the open state.
-
-  ## Examples
-
-      iex> assert_circuit_open("payment_api")
-      :ok
-  """
-  @spec assert_circuit_open(String.t(), Keyword.t()) :: :ok
-  def assert_circuit_open(identifier, opts \\ []) when is_binary(identifier) do
-    case Brama.status(identifier, opts) do
-      {:ok, %{state: :open}} ->
-        :ok
-
-      {:ok, %{state: actual_state}} ->
-        flunk("Expected circuit '#{identifier}' to be open, but was #{actual_state}")
-
-      {:error, reason} ->
-        flunk("Error checking circuit state: #{inspect(reason)}")
-    end
-  end
-
-  @doc """
-  Asserts that a circuit is in the closed state.
-
-  ## Examples
-
-      iex> assert_circuit_closed("payment_api")
-      :ok
-  """
-  @spec assert_circuit_closed(String.t(), Keyword.t()) :: :ok
-  def assert_circuit_closed(identifier, opts \\ []) when is_binary(identifier) do
-    case Brama.status(identifier, opts) do
-      {:ok, %{state: :closed}} ->
-        :ok
-
-      {:ok, %{state: actual_state}} ->
-        flunk("Expected circuit '#{identifier}' to be closed, but was #{actual_state}")
-
-      {:error, reason} ->
-        flunk("Error checking circuit state: #{inspect(reason)}")
-    end
-  end
-
-  @doc """
-  Asserts that a circuit is in the half-open state.
-
-  ## Examples
-
-      iex> assert_circuit_half_open("payment_api")
-      :ok
-  """
-  @spec assert_circuit_half_open(String.t(), Keyword.t()) :: :ok
-  def assert_circuit_half_open(identifier, opts \\ []) when is_binary(identifier) do
-    case Brama.status(identifier, opts) do
-      {:ok, %{state: :half_open}} ->
-        :ok
-
-      {:ok, %{state: actual_state}} ->
-        flunk("Expected circuit '#{identifier}' to be half-open, but was #{actual_state}")
-
-      {:error, reason} ->
-        flunk("Error checking circuit state: #{inspect(reason)}")
-    end
-  end
-
-  @doc """
-  Waits for a specific event to be received.
-
-  ## Examples
-
-      iex> wait_for_event(:state_change, connection: "payment_api")
-      {:ok, event}
-  """
-  @spec wait_for_event(atom(), Keyword.t()) :: {:ok, map()} | {:error, :timeout}
-  def wait_for_event(event_type, opts \\ []) do
-    timeout = Keyword.get(opts, :timeout, 1000)
-
-    # Try to subscribe to events
-    subscribe_result =
-      try do
-        Brama.subscribe(events: [event_type] ++ Keyword.take(opts, [:connection, :scope]))
-      rescue
-        _ -> {:error, :subscription_failed}
-      end
-
-    # Process the result based on subscription success
-    case subscribe_result do
-      {:ok, subscription} ->
-        # Set up a receive block with timeout
-        result =
-          receive do
-            {:brama_event, event} ->
-              {:ok, event}
-          after
-            timeout ->
-              {:error, :timeout}
-          end
-
-        # Clean up subscription
-        try do
-          Brama.unsubscribe(subscription)
-        rescue
-          _ -> :ok
-        end
-
-        result
-
-      _ ->
-        # Return a timeout error if we can't subscribe
-        {:error, :timeout}
-    end
-  end
-
-  @doc """
-  Asserts that a specific event was received.
-
-  ## Examples
-
-      iex> assert_event_received(:state_change, connection: "payment_api")
-      :ok
-  """
-  @spec assert_event_received(atom(), Keyword.t()) :: :ok
-  def assert_event_received(event_type, opts \\ []) do
-    result = wait_for_event(event_type, opts)
-
-    if match?({:ok, _}, result) do
-      :ok
-    else
-      connection = Keyword.get(opts, :connection, "any")
-      flunk("Expected #{event_type} event for #{connection} but none received")
-    end
   end
 
   @doc """
