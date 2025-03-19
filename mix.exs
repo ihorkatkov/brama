@@ -41,7 +41,8 @@ defmodule Brama.MixProject do
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:excoveralls, "~> 0.18", only: :test},
       {:ex_doc, "~> 0.30", only: :dev, runtime: false},
-      {:telemetry, "~> 1.2"}
+      {:telemetry, "~> 1.2"},
+      {:decorator, "~> 1.4"}
     ]
   end
 end

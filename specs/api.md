@@ -257,41 +257,17 @@ Brama.configure("payment_api", max_attempts: 5, expiry: 30_000)
 
 ## Decorator API
 
-The decorator API provides a clean way to wrap functions with circuit breaking logic.
+The decorator API uses the [Decorator](https://hexdocs.pm/decorator/) library to provide a clean way to wrap functions with circuit breaking logic.
 
-### Module Decorator
-
-```elixir
-defmodule MyApi do
-  use Brama.Decorator
-  
-  # Default options for all decorated functions in module
-  @brama_options identifier: "my_api", type: :http
-end
-```
-
-### Function Decorator
+### Usage
 
 ```elixir
 defmodule PaymentService do
   use Brama.Decorator
-  
-  @circuit_breaker identifier: "payment_api"
+
+  @decorate circuit_breaker(identifier: "payment_api")
   def process_payment(payment) do
-    # This will only be called if the circuit is closed
-    # Success/failure will be automatically reported
-    PaymentGateway.process(payment)
-  end
-  
-  @circuit_breaker identifier: "invoice_api", fallback: &fallback_invoice_generation/1
-  def generate_invoice(order_id) do
-    # If circuit is open, fallback function will be called instead
-    InvoiceAPI.generate(order_id)
-  end
-  
-  # Fallback function that will be called when circuit is open
-  defp fallback_invoice_generation(order_id) do
-    {:error, :service_unavailable}
+    PaymentAPI.process(payment)
   end
 end
 ```
@@ -300,40 +276,49 @@ end
 
 The circuit breaker decorator accepts the following options:
 
-- `identifier` - Connection identifier (required)
-- `type` - Connection type (default: `:general`)
-- `scope` - Connection scope (default: `nil`) 
-- `fallback` - Function to call when circuit is open (default: returns `{:error, :circuit_open}`)
-- `error_handler` - Custom function to handle errors and determine success/failure
-- `timeout` - Timeout for the function call (default: 5000ms)
+- `identifier` - A unique string identifier for the circuit breaker instance (required)
+- `error_handler` - Custom function to handle responses and determine success/failure status (optional)
 
-### Error Handling with Decorators
+### Error Handling
 
-By default, any exception or error return value (matching `{:error, _}`) is considered a failure.
-Custom error handling can be specified:
+The error handler function can return the following statuses:
+
+- `:success` - Operation completed successfully, keeps circuit closed
+- `:failure` - Operation failed, increments failure count
+- `{:failure, reason}` - Operation failed with specific reason
+- `:ignore` - Operation result should not affect circuit breaker state
+
+Default error handling behavior:
 
 ```elixir
-@circuit_breaker identifier: "payment_api", 
-                error_handler: fn
-                  {:error, :timeout} -> {:failure, :timeout}  # Report as failure
-                  {:error, :invalid_data} -> :ignore  # Don't report
-                  {:ok, _} -> :success  # Report as success
-                  other -> {:failure, other}  # Report as failure
-                end
+@decorate circuit_breaker(
+  identifier: "payment_api",
+  error_handler: fn
+    {:ok, _} -> :success
+    {:error, reason} -> {:failure, reason}
+    _ -> :ignore
+  end
+)
 def process_payment(payment) do
-  # Custom handling of the result
-  PaymentGateway.process(payment)
+  PaymentAPI.process(payment)
 end
 ```
 
-### Asynchronous Function Decoration
+### Service Unavailability
 
-The decorator also works with async functions:
+When the circuit is open:
+1. The decorated function is not executed
+2. Returns `{:error, status}` where status contains circuit breaker state
+3. Prevents overwhelming failing services with requests
 
+Example response when circuit is open:
 ```elixir
-@circuit_breaker identifier: "data_api", async: true
-def fetch_data(id) do
-  # Async task will be monitored for success/failure
-  Task.async(fn -> DataService.fetch(id) end)
-end
+{:error, status} # where status contains circuit breaker state information
 ```
+
+### Exception Handling
+
+When an exception occurs in the decorated function:
+1. The exception is logged for debugging
+2. A failure is recorded with the exception message as reason
+3. The original exception is re-raised with preserved stacktrace
