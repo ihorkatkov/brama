@@ -24,7 +24,15 @@ Registers a new connection with Brama.
   - `scope` - Grouping category (default: `nil`)
   - `max_attempts` - Override default threshold (default: from config)
   - `expiry` - Override default expiry time (default: from config)
+  - `expiry_strategy` - Strategy for circuit expiry (`:fixed` or `:progressive`)
+  - `initial_expiry` - Initial expiry time for progressive strategy (in ms)
+  - `max_expiry` - Maximum expiry time for progressive strategy (in ms)
+  - `backoff_factor` - Multiplier for progressive backoff (e.g., 2.0)
   - `metadata` - Additional information (default: `%{}`)
+
+**Expiry Strategies:**
+- `:fixed` - Always uses the same expiry time (default)
+- `:progressive` - Increases expiry time after each failure using formula: `min(max_expiry, initial_expiry * (backoff_factor ^ failure_count))`
 
 **Returns:**
 - `{:ok, connection_data}` - Successfully registered
@@ -32,11 +40,21 @@ Registers a new connection with Brama.
 
 **Example:**
 ```elixir
+# Basic registration
 Brama.register("payment_api", 
   type: :http, 
   scope: "payment_services",
   max_attempts: 5,
   expiry: 30_000
+)
+
+# Registration with progressive backoff
+Brama.register("flaky_service",
+  scope: "external_apis",
+  expiry_strategy: :progressive,
+  initial_expiry: 5_000,
+  max_expiry: 120_000,
+  backoff_factor: 2.0
 )
 ```
 
@@ -249,11 +267,48 @@ Update configuration at runtime.
 **Example:**
 ```elixir
 # Update global settings
-Brama.configure(max_attempts: 15, expiry: 120_000)
+Brama.configure(max_attempts: 10, expiry: 60_000)
 
-# Update connection-specific settings
-Brama.configure("payment_api", max_attempts: 5, expiry: 30_000)
+# Update specific connection
+Brama.configure("payment_api",
+  max_attempts: 5,
+  expiry: 30_000,
+  expiry_strategy: :progressive,
+  initial_expiry: 5_000,
+  max_expiry: 60_000,
+  backoff_factor: 2.0
+)
 ```
+
+### Expiry Strategies
+
+Brama supports different strategies for determining how long a circuit remains open:
+
+#### Fixed Expiry (Default)
+
+The circuit remains open for a fixed amount of time before transitioning to half-open:
+
+```elixir
+Brama.configure("payment_api",
+  expiry_strategy: :fixed,  # This is the default strategy
+  expiry: 30_000            # 30 seconds
+)
+```
+
+#### Progressive Backoff
+
+The circuit's expiry time increases with each consecutive failure, allowing for more sophisticated self-healing:
+
+```elixir
+Brama.configure("flaky_service",
+  expiry_strategy: :progressive,
+  initial_expiry: 5_000,     # Start with 5 seconds
+  max_expiry: 300_000,       # Cap at 5 minutes
+  backoff_factor: 2.0        # Double the time with each failure
+)
+```
+
+With this configuration, expiry times would progress: 5s → 10s → 20s → 40s → 80s → 160s → 300s (capped at max)
 
 ## Decorator API
 
@@ -322,3 +377,49 @@ When an exception occurs in the decorated function:
 1. The exception is logged for debugging
 2. A failure is recorded with the exception message as reason
 3. The original exception is re-raised with preserved stacktrace
+
+```elixir
+@decorate Brama.Decorator.circuit_breaker(opts)
+def my_function(args) do
+  # Function body
+end
+```
+
+Wraps functions with circuit breaker functionality.
+
+**Parameters:**
+- `opts` - Options including:
+  - `identifier` - Connection identifier (required)
+  - `error_handler` - Custom function to handle errors and determine success/failure (optional)
+
+**Error Handling:**
+The error handler can return:
+- `:success` - Operation completed successfully
+- `:failure` - Operation failed
+- `{:failure, reason}` - Operation failed with specific reason
+- `:ignore` - Operation result should not affect circuit state
+
+**Example:**
+```elixir
+defmodule PaymentService do
+  use Brama.Decorator
+
+  @decorate circuit_breaker(identifier: "payment_api")
+  def process_payment(payment) do
+    PaymentAPI.process(payment)
+  end
+  
+  @decorate circuit_breaker(
+    identifier: "refund_api",
+    error_handler: fn
+      {:ok, _} -> :success
+      {:error, :invalid_amount} -> {:failure, :validation_error}
+      {:error, :network_timeout} -> {:failure, :service_unavailable}
+      _ -> :ignore
+    end
+  )
+  def process_refund(refund) do
+    RefundAPI.process(refund)
+  end
+end
+```
