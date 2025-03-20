@@ -378,6 +378,7 @@ When an exception occurs in the decorated function:
 2. A failure is recorded with the exception message as reason
 3. The original exception is re-raised with preserved stacktrace
 
+Example response when circuit is open:
 ```elixir
 @decorate Brama.Decorator.circuit_breaker(opts)
 def my_function(args) do
