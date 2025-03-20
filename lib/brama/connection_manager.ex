@@ -15,6 +15,10 @@ defmodule Brama.ConnectionManager do
   @default_max_attempts 5
   # 60 seconds
   @default_expiry 60_000
+  # 10 seconds
+  @default_cleanup_interval 10_000
+  # 24 hours
+  @default_inactive_threshold 86_400_000
 
   # Connection states
   @state_closed :closed
@@ -34,7 +38,11 @@ defmodule Brama.ConnectionManager do
           opened_at: non_neg_integer() | nil,
           last_success_time: non_neg_integer() | nil,
           last_failure_time: non_neg_integer() | nil,
-          metadata: map()
+          metadata: map(),
+          expiry_strategy: :fixed | :progressive,
+          initial_expiry: non_neg_integer(),
+          max_expiry: non_neg_integer(),
+          backoff_factor: float()
         }
 
   # Client API
@@ -45,6 +53,19 @@ defmodule Brama.ConnectionManager do
   @spec start_link(keyword()) :: GenServer.on_start()
   def start_link(opts \\ []) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
+  end
+
+  @doc """
+  Updates the configuration for a specific connection or globally.
+
+  ## Parameters
+
+  - `identifier` - Optional connection identifier. If not provided, updates global settings
+  - `opts` - Configuration options to update
+  """
+  @spec configure(String.t() | nil, keyword()) :: :ok | {:error, term()}
+  def configure(identifier \\ nil, opts) do
+    GenServer.call(__MODULE__, {:configure, identifier, opts})
   end
 
   @doc """
@@ -170,9 +191,55 @@ defmodule Brama.ConnectionManager do
   # Server callbacks
 
   @impl true
-  def init(_opts) do
-    # Initialize the connection registry
-    {:ok, %{connections: %{}}}
+  def init(opts) do
+    # Initialize the connection registry with configuration
+    state = %{
+      connections: %{},
+      config: %{
+        max_attempts: Keyword.get(opts, :max_attempts, @default_max_attempts),
+        expiry: Keyword.get(opts, :expiry, @default_expiry),
+        cleanup_interval: Keyword.get(opts, :cleanup_interval, @default_cleanup_interval),
+        inactive_threshold: Keyword.get(opts, :inactive_threshold, @default_inactive_threshold)
+      }
+    }
+
+    # Schedule cleanup
+    schedule_cleanup()
+
+    {:ok, state}
+  end
+
+  @impl true
+  def handle_call({:configure, nil, opts}, _from, state) do
+    # Update global configuration
+    new_config = Map.merge(state.config, Map.new(opts))
+    {:reply, :ok, %{state | config: new_config}}
+  end
+
+  @impl true
+  def handle_call({:configure, identifier, opts}, _from, state) do
+    scope = Keyword.get(opts, :scope)
+    key = connection_key(identifier, scope)
+
+    case Map.get(state.connections, key) do
+      nil ->
+        {:reply, {:error, :not_found}, state}
+
+      connection ->
+        # Update connection configuration
+        updated_connection = %{
+          connection
+          | max_attempts: Keyword.get(opts, :max_attempts, connection.max_attempts),
+            expiry: Keyword.get(opts, :expiry, connection.expiry),
+            expiry_strategy: Keyword.get(opts, :expiry_strategy, :fixed),
+            initial_expiry: Keyword.get(opts, :initial_expiry, connection.expiry),
+            max_expiry: Keyword.get(opts, :max_expiry, connection.expiry * 10),
+            backoff_factor: Keyword.get(opts, :backoff_factor, 2.0)
+        }
+
+        new_state = put_in(state.connections[key], updated_connection)
+        {:reply, :ok, new_state}
+    end
   end
 
   @impl true
@@ -189,12 +256,16 @@ defmodule Brama.ConnectionManager do
         scope: scope,
         state: @state_closed,
         failure_count: 0,
-        max_attempts: Keyword.get(opts, :max_attempts, @default_max_attempts),
-        expiry: Keyword.get(opts, :expiry, @default_expiry),
+        max_attempts: Keyword.get(opts, :max_attempts, state.config.max_attempts),
+        expiry: Keyword.get(opts, :expiry, state.config.expiry),
         opened_at: nil,
         last_success_time: nil,
         last_failure_time: nil,
-        metadata: Keyword.get(opts, :metadata, %{})
+        metadata: Keyword.get(opts, :metadata, %{}),
+        expiry_strategy: Keyword.get(opts, :expiry_strategy, :fixed),
+        initial_expiry: Keyword.get(opts, :initial_expiry, state.config.expiry),
+        max_expiry: Keyword.get(opts, :max_expiry, state.config.expiry * 10),
+        backoff_factor: Keyword.get(opts, :backoff_factor, 2.0)
       }
 
       # Store the connection
@@ -338,8 +409,8 @@ defmodule Brama.ConnectionManager do
     if Map.has_key?(state.connections, key) do
       connection_data = state.connections[key]
 
-      # Get custom expiry if provided
-      expiry = Keyword.get(opts, :expiry, connection_data.expiry)
+      # Get custom expiry if provided, otherwise calculate based on strategy
+      expiry = Keyword.get(opts, :expiry) || calculate_expiry(connection_data)
 
       # Update connection data
       now = System.system_time(:millisecond)
@@ -418,6 +489,23 @@ defmodule Brama.ConnectionManager do
     end
   end
 
+  @impl true
+  def handle_info(:cleanup, state) do
+    now = System.system_time(:millisecond)
+    new_connections = cleanup_connections(state.connections, now, state.config)
+
+    # Schedule next cleanup
+    schedule_cleanup()
+
+    # Notify about cleanup
+    notify_event(:cleanup, "", nil, %{
+      connections: Map.keys(new_connections),
+      timestamp: now
+    })
+
+    {:noreply, %{state | connections: new_connections}}
+  end
+
   # Helper functions
 
   @spec connection_key(connection_id(), keyword() | String.t() | nil) :: connection_id()
@@ -438,5 +526,90 @@ defmodule Brama.ConnectionManager do
   defp notify_event(event_type, identifier, scope, data) do
     # Send to event dispatcher
     Brama.EventDispatcher.dispatch(event_type, identifier, scope, data)
+  end
+
+  @spec schedule_cleanup() :: :ok
+  defp schedule_cleanup do
+    Process.send_after(
+      self(),
+      :cleanup,
+      Application.get_env(:brama, :cleanup_interval, @default_cleanup_interval)
+    )
+
+    :ok
+  end
+
+  @spec cleanup_connections(map(), non_neg_integer(), map()) :: map()
+  defp cleanup_connections(connections, now, config) do
+    Logger.debug("Starting cleanup with #{map_size(connections)} connections")
+
+    result =
+      Enum.reduce(connections, connections, fn {key, connection}, acc ->
+        Logger.debug("Processing connection #{key} in state #{connection.state}")
+
+        cond do
+          # Check for inactive connections
+          inactive?(connection, now, config.inactive_threshold) ->
+            Logger.debug("Connection #{key} is inactive")
+            # Notify about the removal
+            notify_event(:connection_removed, connection.identifier, connection.scope, connection)
+            Map.delete(acc, key)
+
+          # Check for expiry and update state if needed
+          connection.state == @state_open && connection.opened_at &&
+              now - connection.opened_at >= connection.expiry ->
+            Logger.debug("Connection #{key} is expired, transitioning to half-open")
+            # Transition to half-open
+            updated_connection = %{connection | state: @state_half_open}
+            # Notify about the state change
+            notify_event(
+              :circuit_half_opened,
+              connection.identifier,
+              connection.scope,
+              updated_connection
+            )
+
+            Map.put(acc, key, updated_connection)
+
+          true ->
+            Logger.debug("Connection #{key} remains unchanged")
+            acc
+        end
+      end)
+
+    Logger.debug("Cleanup finished with #{map_size(result)} connections")
+    result
+  end
+
+  @spec inactive?(map(), non_neg_integer(), non_neg_integer()) :: boolean()
+  defp inactive?(connection, now, threshold) do
+    last_activity =
+      Enum.max([
+        connection.last_success_time || 0,
+        connection.last_failure_time || 0,
+        connection.opened_at || 0
+      ])
+
+    now - last_activity > threshold
+  end
+
+  @spec calculate_expiry(map()) :: non_neg_integer()
+  defp calculate_expiry(connection) do
+    case connection.expiry_strategy do
+      :progressive ->
+        # Calculate progressive expiry based on failure count
+        initial = connection.initial_expiry
+        max = connection.max_expiry
+        factor = connection.backoff_factor
+        failures = connection.failure_count
+
+        # Calculate: initial * (factor ^ failures), capped at max
+        (initial * :math.pow(factor, failures))
+        |> min(max)
+        |> trunc()
+
+      :fixed ->
+        connection.expiry
+    end
   end
 end

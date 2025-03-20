@@ -39,6 +39,26 @@ defmodule Brama do
   Brama.reset_circuit!("payment_api")
   ```
 
+  ## Configuration
+
+  Brama supports both global and per-connection configuration:
+
+  ```elixir
+  # Update global settings
+  Brama.configure(max_attempts: 15, expiry: 120_000)
+
+  # Update specific connection
+  Brama.configure("payment_api", max_attempts: 5, expiry: 30_000)
+
+  # Register with progressive backoff
+  Brama.register("flaky_service",
+    expiry_strategy: :progressive,
+    initial_expiry: 10_000,
+    max_expiry: 300_000,
+    backoff_factor: 2.0
+  )
+  ```
+
   ## Event Subscription
 
   Subscribe to events to get notified of state changes:
@@ -299,5 +319,42 @@ defmodule Brama do
   """
   def unsubscribe(subscription_id) do
     EventDispatcher.unsubscribe(subscription_id)
+  end
+
+  @doc """
+  Updates the configuration for a specific connection or globally.
+
+  ## Parameters
+
+  - `identifier` - Optional connection identifier. If not provided, updates global settings
+  - `opts` - Configuration options to update:
+    - `:max_attempts` - Maximum number of failures before opening circuit
+    - `:expiry` - Time in milliseconds before open circuit transitions to half-open
+    - `:expiry_strategy` - Either `:fixed` or `:progressive` for backoff
+    - `:initial_expiry` - Initial expiry time for progressive backoff
+    - `:max_expiry` - Maximum expiry time for progressive backoff
+    - `:backoff_factor` - Factor for exponential backoff
+
+  ## Examples
+
+  ```elixir
+  # Update global settings
+  Brama.configure(max_attempts: 15, expiry: 120_000)
+
+  # Update specific connection
+  Brama.configure("payment_api", max_attempts: 5, expiry: 30_000)
+
+  # Configure progressive backoff
+  Brama.configure("flaky_service",
+    expiry_strategy: :progressive,
+    initial_expiry: 10_000,
+    max_expiry: 300_000,
+    backoff_factor: 2.0
+  )
+  ```
+  """
+  @spec configure(String.t() | nil, keyword()) :: :ok | {:error, term()}
+  def configure(identifier \\ nil, opts) do
+    ConnectionManager.configure(identifier, opts)
   end
 end

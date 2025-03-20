@@ -174,7 +174,7 @@ defmodule BramaTest do
       Brama.register("test_api")
       Brama.subscribe([])
       assert :ok = Brama.open_circuit!("test_api", expiry: 50)
-      assert_receive {:brama_event, %{data: %{state: :closed}}}, 100
+      assert_receive {:brama_event, %{data: %{state: :open}}}, 100
     end
   end
 

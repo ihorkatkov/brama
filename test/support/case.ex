@@ -6,9 +6,15 @@ defmodule Brama.TestCase do
   use ExUnit.CaseTemplate
 
   setup do
+    # Start the application if not started
+    Application.ensure_all_started(:brama)
+
     on_exit(fn ->
-      pid = Process.whereis(Brama.ConnectionManager)
-      :sys.replace_state(pid, fn state -> %{state | connections: %{}} end)
+      if pid = Process.whereis(Brama.ConnectionManager) do
+        :sys.replace_state(pid, fn state -> %{state | connections: %{}} end)
+      end
     end)
+
+    :ok
   end
 end

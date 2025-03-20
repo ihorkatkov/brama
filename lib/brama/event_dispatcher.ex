@@ -24,7 +24,9 @@ defmodule Brama.EventDispatcher do
     :circuit_closed,
     :circuit_reset,
     :connection_registered,
-    :connection_unregistered
+    :connection_unregistered,
+    :circuit_half_opened,
+    :connection_removed
   ]
 
   # Client API
