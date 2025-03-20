@@ -1,6 +1,6 @@
 ---
 description: 
-globs: 
+globs: .exs,.exs
 alwaysApply: false
 ---
  # Elixir Performance Optimization

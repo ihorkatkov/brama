@@ -1,0 +1,170 @@
+---
+description: 
+globs: .ex,.exs
+alwaysApply: false
+---
+<rule>
+name: elixir_complete_implementation
+description: Standards for ensuring complete implementation of code and tests
+filters:
+  - type: file_extension
+    pattern: "\\.ex$|\\.exs$"
+
+actions:
+  - type: suggest
+    message: |
+      # Code Completeness Standards
+
+      ## Core Requirements
+      - Never leave incomplete or partially implemented code
+      - Never commit code without corresponding tests
+      - All implementation paths must be handled
+      - All edge cases must be covered in tests
+
+      ## Implementation Process
+      1. Before starting implementation:
+         - Fully understand the requirements
+         - Plan all edge cases
+         - Design test scenarios
+      
+      2. During implementation:
+         - Complete one functional unit at a time
+         - Write tests alongside the implementation
+         - If stuck, immediately seek user guidance
+         - Do not proceed with partial solutions
+      
+      3. Before considering implementation complete:
+         - All planned test cases are implemented
+         - All functions have documentation
+         - All edge cases are handled
+         - All compiler warnings are addressed
+
+      ## When Stuck
+      1. Stop implementation immediately
+      2. Document current progress
+      3. List specific challenges or unknowns
+      4. Ask user for guidance with:
+         - Current implementation state
+         - Specific questions about unclear parts
+         - Proposed approaches to consider
+
+      ## Exceptions
+      - None. All code must be complete with tests
+
+examples:
+  - input: |
+      # Bad: Incomplete implementation
+      defmodule UserManager do
+        def create_user(params) do
+          # TODO: Add validation
+          # TODO: Handle errors
+          User.changeset(params)
+          |> Repo.insert()
+        end
+        
+        # TODO: Implement update_user
+        
+        def delete_user(id) do
+          # Need to handle cascading deletes
+          Repo.get(User, id)
+          |> Repo.delete()
+        end
+      end
+    output: |
+      """
+      I need guidance before proceeding with the implementation:
+
+      1. Current status:
+         - Basic create_user structure is in place
+         - delete_user needs cascade handling
+         - update_user is not implemented
+
+      2. Specific questions:
+         - What validation rules should be applied?
+         - How should we handle cascading deletes?
+         - What fields should be updatable?
+
+      3. Proposed approach:
+         - Add validation using Ecto.Changeset
+         - Implement soft deletes
+         - Add update with permitted fields
+
+      How would you like me to proceed with the implementation?
+      """
+
+      # Good: Complete implementation after guidance
+      defmodule UserManager do
+        @moduledoc """
+        Handles user management operations with complete validation and error handling.
+        """
+
+        @doc """
+        Creates a new user with validation and error handling.
+        
+        ## Examples
+            
+            iex> create_user(%{email: "user@example.com", name: "John"})
+            {:ok, %User{}}
+            
+            iex> create_user(%{email: "invalid"})
+            {:error, %Ecto.Changeset{}}
+        """
+        def create_user(params) do
+          %User{}
+          |> User.changeset(params)
+          |> validate_unique_email()
+          |> Repo.insert()
+          |> broadcast_user_created()
+        end
+
+        @doc """
+        Updates a user with validation and error handling.
+        """
+        def update_user(user, params) do
+          user
+          |> User.changeset(params)
+          |> validate_unique_email()
+          |> Repo.update()
+          |> broadcast_user_updated()
+        end
+
+        @doc """
+        Soft deletes a user and handles all cascading operations.
+        """
+        def delete_user(id) do
+          with {:ok, user} <- get_user(id),
+               :ok <- validate_deletable(user),
+               {:ok, _} <- handle_cascade_deletes(user),
+               {:ok, deleted} <- do_soft_delete(user) do
+            broadcast_user_deleted(deleted)
+          end
+        end
+
+        # Private functions with complete implementation...
+      end
+
+      # Complete test module
+      defmodule UserManagerTest do
+        use ExUnit.Case
+        
+        describe "create_user/1" do
+          test "creates user with valid params" do
+            # Complete test implementation
+          end
+
+          test "handles invalid params" do
+            # Complete test implementation
+          end
+
+          test "validates unique email" do
+            # Complete test implementation
+          end
+        end
+
+        # Complete test cases for all functions...
+      end
+
+metadata:
+  priority: high
+  version: 1.0
+</rule>

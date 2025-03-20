@@ -1,6 +1,6 @@
 ---
-description: Cursor Rules Location b
-globs: *.mdc
+description: 
+globs: .mdc
 alwaysApply: false
 ---
 # Cursor Rules Location

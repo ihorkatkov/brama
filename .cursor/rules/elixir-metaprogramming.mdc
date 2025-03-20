@@ -215,4 +215,82 @@ examples:
 metadata:
   priority: high
   version: 1.0
+</rule>
+
+<rule>
+name: elixir_no_direct_macro_implementation
+description: Restrictions on direct macro implementation to ensure proper review and necessity evaluation
+filters:
+  - type: file_extension
+    pattern: "\\.ex$|\\.exs$"
+
+actions:
+  - type: suggest
+    message: |
+      # Macro Implementation Policy
+
+      ## Core Policy
+      - Never implement macros directly without user consultation
+      - Always prefer regular functions over macros when possible
+      - Seek explicit user approval for macro implementation
+
+      ## Process
+      1. When identifying a potential macro use case:
+         - Present the use case to the user
+         - Explain why a macro might be needed
+         - Propose alternative solutions using regular functions
+      
+      2. Only proceed with macro implementation after:
+         - User explicitly approves the macro approach
+         - Regular function alternatives have been considered
+         - The necessity of compile-time behavior is confirmed
+
+      ## Exceptions
+      - None. All macro implementations require user consultation
+
+examples:
+  - input: |
+      # Instead of directly implementing a macro:
+      defmodule DirectMacro do
+        defmacro auto_log(do: block) do
+          quote do
+            IO.puts("Starting execution")
+            result = unquote(block)
+            IO.puts("Finished execution")
+            result
+          end
+        end
+      end
+    output: |
+      # First propose a regular function solution:
+      defmodule RegularApproach do
+        def with_logging(fun) do
+          IO.puts("Starting execution")
+          result = fun.()
+          IO.puts("Finished execution")
+          result
+        end
+      end
+      
+      # Then discuss with user if a macro is truly needed for compile-time benefits:
+      """
+      We could implement this as a macro if you need compile-time optimizations or AST manipulation.
+      Would you like to explore the macro approach? Here are the trade-offs:
+      
+      Regular function benefits:
+      - Simpler to understand and maintain
+      - More flexible at runtime
+      - Easier to test
+      
+      Macro potential benefits:
+      - Compile-time optimizations
+      - Custom syntax
+      - Zero runtime overhead
+      
+      How would you like to proceed?
+      """
+
+metadata:
+  priority: high
+  version: 1.0
 </rule> 
