@@ -22,11 +22,16 @@ Brama is designed to act as a gatekeeper for your application's interactions wit
 
 ## Development Roadmap
 
-This specification will evolve as development progresses. The initial focus will be on implementing:
+This specification will evolve as development progresses. Implementation priorities:
 
-1. Core connection monitoring functionality
+1. Core connection monitoring and registry functionality
 2. Basic circuit breaking mechanism
-3. Simple status notification system
-4. Function decorator API for seamless integration
+3. Expiry strategies (fixed and progressive)
+4. Status notification system
+5. Function decorator API for seamless integration
+6. Event subscription and delivery system
+7. Telemetry integration
+8. Advanced configuration options
+9. Documentation and examples
 
-Subsequent development will enhance these features and add more advanced capabilities. 
+The development will follow an iterative approach, starting with the core functionality and progressively adding features while maintaining backward compatibility. 
