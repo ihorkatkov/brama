@@ -45,9 +45,15 @@ Enables applications to react to connection status changes:
 ### Decorator
 
 Provides a clean way to wrap functions with circuit breaking functionality:
-- Implemented as Elixir macros for compile-time function wrapping
+- Uses the `Decorator` library to implement function decorators with `@decorate` syntax
 - Automatically checks circuit status before function execution
-- Reports success or failure after function execution
+- Reports success or failure after function execution based on return values
+- Uses customizable error handlers to determine success/failure status:
+  - `:success` - Operation completed successfully
+  - `:failure` - Operation failed
+  - `{:failure, reason}` - Operation failed with specific reason
+  - `:ignore` - Operation result should not affect circuit state
+- Catches and properly handles exceptions by recording failures and re-raising
 - Handles circuit state appropriately on errors
 - Minimizes boilerplate code for API consumers
 - Works with both synchronous and asynchronous functions

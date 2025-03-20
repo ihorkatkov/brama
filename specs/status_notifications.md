@@ -16,6 +16,13 @@ Brama generates the following types of events:
 | `:success` | Connection success reported |
 | `:expiry` | Circuit expiry time reached |
 | `:cleanup` | Connection removed during cleanup |
+| `:circuit_opened` | Circuit has been opened |
+| `:circuit_closed` | Circuit has been closed |
+| `:circuit_reset` | Circuit has been reset |
+| `:connection_registered` | New connection registered |
+| `:connection_unregistered` | Connection unregistered |
+| `:circuit_half_opened` | Circuit has transitioned to half-open |
+| `:connection_removed` | Connection has been removed |
 
 ## Event Data Structure
 

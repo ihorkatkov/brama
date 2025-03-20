@@ -39,7 +39,12 @@ Brama provides a dedicated `Brama.TestHelpers` module that simplifies testing of
 Directly sets the state of a circuit to `:closed`, `:open`, or `:half_open`. Options include:
 
 - `scope`: Optional scope to target a specific connection scope
-- Other options passed to underlying Brama functions
+- `reason`: Optional reason for the state change (default: "Test setup")
+
+The implementation uses the appropriate Brama functions internally:
+- For `:open` state, uses `Brama.open_circuit!`
+- For `:closed` state, uses `Brama.close_circuit!`
+- For `:half_open` state, opens the circuit first and then uses a specialized internal function
 
 ```elixir
 # Force a connection into open state
