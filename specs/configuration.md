@@ -12,7 +12,7 @@ Brama is configured in your application's config files:
 # In config/config.exs
 config :brama,
   # Circuit breaker settings
-  max_attempts: 10,           # Attempts before circuit opens (default: 10)
+  max_attempts: 5,            # Attempts before circuit opens (default: 5)
   expiry: 60_000,             # Circuit open duration in ms (default: 60,000)
   
   # Cleanup settings
@@ -83,7 +83,7 @@ Brama.configure("payment_api", max_attempts: 5, expiry: 30_000)
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `max_attempts` | Integer | 10 | Number of failures before circuit opens |
+| `max_attempts` | Integer | 5 | Number of failures before circuit opens |
 | `expiry` | Integer | 60_000 | Time in ms before open circuit transitions to half-open |
 | `cleanup_interval` | Integer | 10_000 | Time in ms between cleanup checks |
 | `inactive_threshold` | Integer | 86_400_000 | Time in ms before connection considered inactive |
