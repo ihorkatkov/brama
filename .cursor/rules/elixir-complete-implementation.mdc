@@ -9,6 +9,11 @@ description: Standards for ensuring complete implementation of code and tests
 filters:
   - type: file_extension
     pattern: "\\.ex$|\\.exs$"
+  - type: directory
+    exclude_patterns:
+      - "^\\.git"
+      - "^_build"
+      - "^deps"
 
 actions:
   - type: suggest

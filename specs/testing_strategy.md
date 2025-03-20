@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document outlines the simplified MVP testing strategy for the Brama library. It focuses on essential unit testing and integration testing.
+This document outlines the testing strategy for the Brama library, focusing on unit testing, integration testing, and providing helper functions for testing applications that use Brama.
 
 ## Testing Levels
 
@@ -20,35 +20,87 @@ Integration tests will verify interactions between components:
 - Circuit state transitions under various conditions
 - Cleanup and expiry interactions
 
-## Testing Features
+## Test Helpers Module
 
-### State Manipulation
+Brama provides a dedicated `Brama.TestHelpers` module that simplifies testing of applications that use Brama. This module includes functions for:
 
-Tests can directly manipulate circuit state:
+- Directly manipulating circuit states
+- Simulating failures and recoveries
+- Working with connection scopes
+
+### Available Helper Functions
+
+#### Setting Circuit State
 
 ```elixir
-# Force a connection into specific state
+@spec set_state(String.t(), atom(), Keyword.t()) :: :ok | {:error, term()}
+```
+
+Directly sets the state of a circuit to `:closed`, `:open`, or `:half_open`. Options include:
+
+- `scope`: Optional scope to target a specific connection scope
+- Other options passed to underlying Brama functions
+
+```elixir
+# Force a connection into open state
 Brama.TestHelpers.set_state("payment_api", :open)
 
-# Add failure count
-Brama.TestHelpers.add_failures("payment_api", 5)
+# Force a connection in a specific scope into closed state
+Brama.TestHelpers.set_state("payment_api", :closed, scope: "external_vendors")
+
+# Set a connection to half-open state
+Brama.TestHelpers.set_state("payment_api", :half_open)
 ```
 
-## Test Helpers
-
-Brama provides test helpers to make testing applications easier:
-
-### Mocking External Services
-
-Helpers for simulating dependency failures:
+#### Simulating Failures
 
 ```elixir
-# Simulate a service temporarily failing
-Brama.TestHelpers.simulate_failures("payment_api", 5)
+@spec add_failures(String.t(), non_neg_integer(), Keyword.t()) :: :ok | {:error, term()}
+```
 
+Adds a specific number of consecutive failures to a connection. Options include:
+
+- `scope`: Optional scope to target a specific connection scope
+- Other options passed to underlying Brama functions
+
+```elixir
+# Add 5 failures to a connection
+Brama.TestHelpers.add_failures("payment_api", 5)
+
+# Add failures to a scoped connection
+Brama.TestHelpers.add_failures("payment_api", 3, scope: "external_vendors")
+```
+
+```elixir
+@spec simulate_failures(String.t(), non_neg_integer(), Keyword.t()) :: :ok | {:error, term()}
+```
+
+Alias for `add_failures/3` that simulates a service temporarily failing.
+
+```elixir
+# Simulate 5 failures for a service
+Brama.TestHelpers.simulate_failures("payment_api", 5)
+```
+
+#### Simulating Recovery
+
+```elixir
+@spec simulate_recovery(String.t(), Keyword.t()) :: :ok | {:error, term()}
+```
+
+Simulates a service recovering by reporting a success. Options include:
+
+- `scope`: Optional scope to target a specific connection scope
+- Other options passed to underlying Brama functions
+
+```elixir
 # Simulate service recovery
 Brama.TestHelpers.simulate_recovery("payment_api")
+
+# Simulate recovery for a scoped connection
+Brama.TestHelpers.simulate_recovery("payment_api", scope: "external_vendors")
 ```
+
 ## Testing Strategies for Applications
 
 ### Unit Testing with Brama
@@ -76,6 +128,37 @@ defmodule MyApp.PaymentServiceTest do
     
     # Assert correct fallback behavior
     assert result == {:error, :service_unavailable}
+  end
+
+  test "circuit opens after multiple failures" do
+    # Simulate failures
+    add_failures("payment_api", 10)
+    
+    # Assert circuit state
+    assert {:ok, %{state: :open}} = Brama.status("payment_api")
+  end
+
+  test "circuit transitions to half-open after recovery period" do
+    # Setup: open the circuit
+    set_state("payment_api", :open)
+    
+    # Simulate time passing (in a real test, you might use mocking for time)
+    # Then transition to half-open
+    set_state("payment_api", :half_open)
+    
+    # Assert correct state
+    assert {:ok, %{state: :half_open}} = Brama.status("payment_api")
+  end
+
+  test "circuit closes after successful recovery" do
+    # Setup: set to half-open
+    set_state("payment_api", :half_open)
+    
+    # Simulate recovery
+    simulate_recovery("payment_api")
+    
+    # Assert circuit closed
+    assert {:ok, %{state: :closed}} = Brama.status("payment_api")
   end
 end
 ```
