@@ -1,6 +1,6 @@
 ---
 description: 
-globs: 
+globs: .ex,.exs
 alwaysApply: false
 ---
 # Elixir Naming Conventions

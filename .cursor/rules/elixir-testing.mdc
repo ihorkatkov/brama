@@ -1,6 +1,6 @@
 ---
 description: 
-globs: 
+globs: .exs,.ex
 alwaysApply: false
 ---
 # Elixir Testing Practices
