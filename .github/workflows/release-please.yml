@@ -1,0 +1,56 @@
+name: Release Please
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: google-github-actions/release-please-action@v3
+        id: release
+        with:
+          release-type: elixir
+          package-name: brama
+          changelog-types: |
+            [
+              {"type":"feat","section":"Features","hidden":false},
+              {"type":"fix","section":"Bug Fixes","hidden":false},
+              {"type":"chore","section":"Miscellaneous","hidden":true},
+              {"type":"docs","section":"Documentation","hidden":false},
+              {"type":"perf","section":"Performance Improvements","hidden":false},
+              {"type":"refactor","section":"Code Refactoring","hidden":false}
+            ]
+          
+      # The following steps only run if a release PR was merged
+      - uses: actions/checkout@v4
+        if: ${{ steps.release.outputs.release_created }}
+        
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: '1.15.7'
+          otp-version: '26.0'
+        if: ${{ steps.release.outputs.release_created }}
+          
+      - name: Restore dependencies cache
+        uses: actions/cache@v3
+        with:
+          path: deps
+          key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-
+        if: ${{ steps.release.outputs.release_created }}
+        
+      - name: Install dependencies
+        run: mix deps.get
+        if: ${{ steps.release.outputs.release_created }}
+        
+      - name: Generate docs
+        run: mix docs
+        if: ${{ steps.release.outputs.release_created }} 
