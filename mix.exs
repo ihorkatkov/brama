@@ -1,10 +1,14 @@
 defmodule Brama.MixProject do
   use Mix.Project
 
+  @version "1.0.0"
+  @source_url "https://github.com/ihorkatkov/brama"
+  @description "An Elixir library for reliable connection management with external dependencies"
+
   def project do
     [
       app: :brama,
-      version: "0.1.0",
+      version: @version,
       elixir: "~> 1.15",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
@@ -22,7 +26,14 @@ defmodule Brama.MixProject do
         "coveralls.post": :test,
         "coveralls.html": :test
       ],
-      elixirc_paths: elixirc_paths(Mix.env())
+      elixirc_paths: elixirc_paths(Mix.env()),
+
+      # Hex.pm package information
+      description: @description,
+      package: package(),
+      docs: docs(),
+      name: "Brama",
+      source_url: @source_url
     ]
   end
 
@@ -44,9 +55,32 @@ defmodule Brama.MixProject do
       {:sobelow, "~> 0.13", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:excoveralls, "~> 0.18", only: :test},
-      {:ex_doc, "~> 0.30", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.30", only: [:dev, :test, :docs], runtime: false},
       {:telemetry, "~> 1.2"},
       {:decorator, "~> 1.4"}
+    ]
+  end
+
+  defp package do
+    [
+      name: "brama",
+      maintainers: ["Ihor Katkov"],
+      licenses: ["MIT"],
+      links: %{
+        "GitHub" => @source_url,
+        "Docs" => "https://hexdocs.pm/brama"
+      },
+      files: ~w(lib .formatter.exs mix.exs README.md LICENSE SPECS.md)
+    ]
+  end
+
+  defp docs do
+    [
+      main: "readme",
+      extras: ["README.md", "SPECS.md"],
+      source_url: @source_url,
+      source_ref: "v#{@version}",
+      formatters: ["html"]
     ]
   end
 end
