@@ -19,7 +19,12 @@ defmodule Brama.DecoratorTest do
     end
 
     @decorate circuit_breaker(identifier: "exception_service")
+    # Function deliberately raises an exception to test error handling.
+    # Suppress dialyzer warning about unreachable code from decorator.
+    @dialyzer {:nowarn_function, exception_function: 1}
     def exception_function(_arg) do
+      # This function intentionally raises an exception for testing
+      # the circuit breaker's exception handling
       raise "Service exception"
     end
 

@@ -185,6 +185,12 @@ defmodule Brama.ConnectionManagerTest do
 
   describe "cleanup and expiry" do
     test "transitions from open to half-open after expiry" do
+      # Store original config for restoration
+      original_config = :sys.get_state(ConnectionManager).config
+
+      # Configure with high inactive threshold to prevent cleanup removing the connection
+      ConnectionManager.configure(nil, inactive_threshold: 3_600_000)
+
       # Register connection with short expiry
       assert {:ok, _} = ConnectionManager.register("expiry_test_api", expiry: 500)
 
@@ -192,14 +198,20 @@ defmodule Brama.ConnectionManagerTest do
       ConnectionManager.open_circuit!("expiry_test_api")
       assert {:ok, %{state: :open}} = ConnectionManager.status("expiry_test_api")
 
-      # Wait for expiry
-      Process.sleep(600)
+      # Wait for expiry with extra buffer time to avoid race conditions
+      Process.sleep(1000)
 
       # Trigger cleanup
       send(ConnectionManager, :cleanup)
 
+      # Wait a bit to ensure message is processed
+      Process.sleep(100)
+
       # Check state transition
       assert {:ok, %{state: :half_open}} = ConnectionManager.status("expiry_test_api")
+
+      # Restore original configuration
+      :sys.replace_state(ConnectionManager, fn state -> %{state | config: original_config} end)
     end
 
     test "cleans up inactive connections" do
