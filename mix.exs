@@ -77,7 +77,19 @@ defmodule Brama.MixProject do
   defp docs do
     [
       main: "readme",
-      extras: ["README.md", "SPECS.md"],
+      extras: [
+        "README.md",
+        "SPECS.md",
+        "specs/architecture.md",
+        "specs/circuit_breaking.md",
+        "specs/status_notifications.md",
+        "specs/connection_monitoring.md",
+        "specs/self_healing.md",
+        "specs/failure_isolation.md",
+        "specs/configuration.md",
+        "specs/testing_strategy.md",
+        "specs/api.md"
+      ],
       source_url: @source_url,
       source_ref: "v#{@version}",
       formatters: ["html"]

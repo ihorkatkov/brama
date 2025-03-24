@@ -23,6 +23,7 @@ defmodule Brama.TestHelpers do
     # Assert circuit state
     assert {:ok, %{state: :open}} = Brama.status("test_api")
   end
+  ```
   """
 
   @doc """
