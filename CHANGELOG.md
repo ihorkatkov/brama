@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.1](https://github.com/ihorkatkov/brama/compare/v1.0.0...v1.0.1) (2025-03-24)
+
+
+### Bug Fixes
+
+* connection manager flaky test ([#13](https://github.com/ihorkatkov/brama/issues/13)) ([99c8a22](https://github.com/ihorkatkov/brama/commit/99c8a2251be6e4790c90519e6570cbb7127639d4))
+* docs ([#11](https://github.com/ihorkatkov/brama/issues/11)) ([abbeb2f](https://github.com/ihorkatkov/brama/commit/abbeb2fd296e975fa61d83f87d1359d11e18f5c1))
+
 ## 1.0.0 (2025-03-24)
 
 
