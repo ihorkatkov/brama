@@ -26,7 +26,7 @@ Add Brama to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:brama, "~> 0.1.0"},
+    {:brama, "~> 1.0.0"},
   ]
 end
 ```
