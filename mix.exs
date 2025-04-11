@@ -3,7 +3,7 @@ defmodule Brama.MixProject do
 
   @version "1.0.1"
   @source_url "https://github.com/ihorkatkov/brama"
-  @description "An Elixir library for reliable connection management with external dependencies"
+  @description "An Elixir-native circuit breaker library for reliable connection management with external dependencies"
 
   def project do
     [
