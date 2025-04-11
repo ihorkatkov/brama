@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/ihorkatkov/brama/compare/v1.0.1...v1.1.0) (2025-04-11)
+
+
+### Features
+
+* update package description ([#14](https://github.com/ihorkatkov/brama/issues/14)) ([c06556d](https://github.com/ihorkatkov/brama/commit/c06556db68e1a92bcbef04eedf0136726961358b))
+
 ## [1.0.1](https://github.com/ihorkatkov/brama/compare/v1.0.0...v1.0.1) (2025-03-24)
 
 
