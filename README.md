@@ -2,8 +2,6 @@
 
 Brama is an Elixir library for reliable connection management with external dependencies. It provides robust tracking of connection statuses to APIs, services, databases, or any external system, with built-in circuit breaking to prevent cascading failures.
 
-> This library is my first attempt at utilizing the ["stdlib" approach](https://ghuntley.com/stdlib/) for building software. This method involves creating comprehensive specifications before implementation, building a collection of Cursor rules to guide development, and treating AI as an autonomous agent rather than just a coding assistant. The whole library is going to be written by Cursor Agent with my supervision.
-
 ## Overview
 
 When your application depends on external systems, knowing their availability status becomes critical. Brama serves as a gatekeeper (the name "Brama" means "gate" in several languages), monitoring your connections and protecting your application from external system failures.
@@ -26,7 +24,7 @@ Add Brama to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:brama, "~> 1.0.0"},
+    {:brama, "~> 1.0.2"},
   ]
 end
 ```
